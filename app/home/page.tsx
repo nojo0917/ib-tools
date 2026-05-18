@@ -18,7 +18,6 @@ export default function HomePage() {
         background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)',
       }}
     >
-      {/* Subtle dot grid overlay */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -52,7 +51,7 @@ export default function HomePage() {
         >
           Your AI Study Companion
         </h2>
-        <p className="text-blue-200 text-sm mb-14 text-center max-w-md leading-relaxed">
+        <p className="text-blue-100 text-sm mb-14 text-center max-w-md leading-relaxed">
           Three powerful tools to help you study smarter, write better, and understand deeper.
         </p>
 
@@ -60,16 +59,16 @@ export default function HomePage() {
           {/* Generate */}
           <button
             onClick={() => router.push('/generate')}
-            className="group relative bg-white bg-opacity-5 border border-white border-opacity-10 rounded-2xl p-7 text-left hover:bg-opacity-10 hover:border-blue-400 hover:border-opacity-60 transition-all duration-200"
+            className="group bg-white rounded-2xl p-7 text-left hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
           >
             <div className="text-3xl mb-4">✏️</div>
-            <h3 className="text-base font-semibold text-white mb-2 group-hover:text-blue-300 transition-colors">
+            <h3 className="text-base font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
               Generate
             </h3>
-            <p className="text-sm text-blue-200 leading-relaxed opacity-80">
+            <p className="text-sm text-gray-600 leading-relaxed">
               Essays, study notes, IA ideas, outlines, and revision help from your personal IB tutor.
             </p>
-            <div className="mt-6 text-xs text-blue-400 font-medium group-hover:text-blue-300">
+            <div className="mt-6 text-xs text-blue-600 font-semibold group-hover:underline">
               Start chatting →
             </div>
           </button>
@@ -77,16 +76,16 @@ export default function HomePage() {
           {/* AI Check */}
           <button
             onClick={() => router.push('/ai-check')}
-            className="group relative bg-white bg-opacity-5 border border-white border-opacity-10 rounded-2xl p-7 text-left hover:bg-opacity-10 hover:border-blue-400 hover:border-opacity-60 transition-all duration-200"
+            className="group bg-white rounded-2xl p-7 text-left hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
           >
             <div className="text-3xl mb-4">🔍</div>
-            <h3 className="text-base font-semibold text-white mb-2 group-hover:text-blue-300 transition-colors">
+            <h3 className="text-base font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
               AI Check
             </h3>
-            <p className="text-sm text-blue-200 leading-relaxed opacity-80">
+            <p className="text-sm text-gray-600 leading-relaxed">
               Find out how likely any text is to be AI-generated with scores from multiple detectors.
             </p>
-            <div className="mt-6 text-xs text-blue-400 font-medium group-hover:text-blue-300">
+            <div className="mt-6 text-xs text-blue-600 font-semibold group-hover:underline">
               Check text →
             </div>
           </button>
@@ -94,22 +93,22 @@ export default function HomePage() {
           {/* Humanize */}
           <button
             onClick={() => router.push('/humanize')}
-            className="group relative bg-white bg-opacity-5 border border-white border-opacity-10 rounded-2xl p-7 text-left hover:bg-opacity-10 hover:border-blue-400 hover:border-opacity-60 transition-all duration-200"
+            className="group bg-white rounded-2xl p-7 text-left hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
           >
             <div className="text-3xl mb-4">🪄</div>
-            <h3 className="text-base font-semibold text-white mb-2 group-hover:text-blue-300 transition-colors">
+            <h3 className="text-base font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
               Humanize
             </h3>
-            <p className="text-sm text-blue-200 leading-relaxed opacity-80">
+            <p className="text-sm text-gray-600 leading-relaxed">
               Rewrite AI text to sound natural and genuine. Choose from 5 different writing styles.
             </p>
-            <div className="mt-6 text-xs text-blue-400 font-medium group-hover:text-blue-300">
+            <div className="mt-6 text-xs text-blue-600 font-semibold group-hover:underline">
               Rewrite text →
             </div>
           </button>
         </div>
 
-        <p className="mt-14 text-xs text-blue-300 opacity-40 text-center">
+        <p className="mt-14 text-xs text-blue-300 opacity-50 text-center">
           Free for all IB students · Powered by AI
         </p>
       </div>
