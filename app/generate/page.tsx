@@ -1,5 +1,7 @@
 'use client'
 import ReactMarkdown from 'react-markdown'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -136,8 +138,13 @@ export default function GeneratePage() {
               </button>
             </div>
             <div className="prose prose-sm max-w-none text-gray-900">
-              <ReactMarkdown>{output}</ReactMarkdown>
-            </div>
+  <ReactMarkdown
+    remarkPlugins={[remarkMath]}
+    rehypePlugins={[rehypeKatex]}
+  >
+    {output}
+  </ReactMarkdown>
+</div>
           </div>
         )}
       </div>
