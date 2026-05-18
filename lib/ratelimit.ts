@@ -9,15 +9,15 @@ const redis = new Redis({
 const limiters = {
   generate: new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(10, '1h'),
+    limiter: Ratelimit.slidingWindow(50, '1h'),
   }),
   'ai-check': new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(20, '1h'),
+    limiter: Ratelimit.slidingWindow(100, '1h'),
   }),
   humanize: new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(10, '1h'),
+    limiter: Ratelimit.slidingWindow(50, '1h'),
   }),
 }
 
