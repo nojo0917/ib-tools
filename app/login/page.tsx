@@ -30,7 +30,7 @@ export default function LoginPage() {
       email,
       password,
       options: {
-        emailRedirectTo: 'http://localhost:3000/generate'
+        emailRedirectTo: `${window.location.origin}/generate`
       }
     })
     if (error) {
@@ -43,10 +43,22 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="bg-white p-8 rounded-xl shadow-sm border w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-2">IB Study Tools</h1>
-        <p className="text-gray-500 mb-6">Sign in or create a free account</p>
+    <div
+      className="min-h-screen flex items-center justify-center"
+      style={{
+        backgroundImage: `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=1600&q=80')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      <div className="bg-white bg-opacity-95 p-8 rounded-2xl shadow-xl w-full max-w-md">
+        <h1
+          className="text-3xl font-bold mb-1 text-blue-600"
+          style={{ fontFamily: 'Georgia, serif', letterSpacing: '-0.5px' }}
+        >
+          IB Study Tools
+        </h1>
+        <p className="text-gray-500 mb-6 text-sm">Sign in or create a free account</p>
 
         {error && (
           <div className="bg-red-50 text-red-700 p-3 rounded-lg mb-4 text-sm">
@@ -59,14 +71,14 @@ export default function LoginPage() {
           placeholder="Email"
           value={email}
           onChange={e => setEmail(e.target.value)}
-          className="w-full border rounded-lg p-3 mb-3 text-sm"
+          className="w-full border rounded-lg p-3 mb-3 text-sm text-gray-900"
         />
         <input
           type="password"
           placeholder="Password"
           value={password}
           onChange={e => setPassword(e.target.value)}
-          className="w-full border rounded-lg p-3 mb-4 text-sm"
+          className="w-full border rounded-lg p-3 mb-4 text-sm text-gray-900"
         />
 
         <button
