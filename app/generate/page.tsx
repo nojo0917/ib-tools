@@ -35,6 +35,10 @@ interface Generation {
   input: string
   output: string
   created_at: string
+  metadata?: {
+    pinned?: boolean
+    label?: string
+  }
 }
 
 export default function GeneratePage() {
@@ -47,6 +51,9 @@ export default function GeneratePage() {
   const [history, setHistory] = useState<Generation[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [started, setStarted] = useState(false)
+  const [menuOpen, setMenuOpen] = useState<string | null>(null)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const supabase = createClient()
@@ -59,14 +66,27 @@ export default function GeneratePage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  useEffect(() => {
+    const handleClick = () => setMenuOpen(null)
+    document.addEventListener('click', handleClick)
+    return () => document.removeEventListener('click', handleClick)
+  }, [])
+
   const loadHistory = async () => {
     const { data } = await supabase
       .from('generations')
       .select('*')
       .eq('tool', 'generate')
       .order('created_at', { ascending: false })
-      .limit(30)
-    if (data) setHistory(data)
+      .limit(50)
+    if (data) {
+      const sorted = [...data].sort((a, b) => {
+        const aPinned = a.metadata?.pinned ? 1 : 0
+        const bPinned = b.metadata?.pinned ? 1 : 0
+        return bPinned - aPinned
+      })
+      setHistory(sorted)
+    }
   }
 
   const handleLogout = async () => {
@@ -92,6 +112,41 @@ export default function GeneratePage() {
     ])
     setStarted(true)
     setError('')
+  }
+
+  const handlePin = async (e: React.MouseEvent, gen: Generation) => {
+    e.stopPropagation()
+    setMenuOpen(null)
+    const pinned = !gen.metadata?.pinned
+    await supabase
+      .from('generations')
+      .update({ metadata: { ...gen.metadata, pinned } })
+      .eq('id', gen.id)
+    loadHistory()
+  }
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    setMenuOpen(null)
+    if (!confirm('Delete this chat?')) return
+    await supabase.from('generations').delete().eq('id', id)
+    loadHistory()
+  }
+
+  const startRename = (e: React.MouseEvent, gen: Generation) => {
+    e.stopPropagation()
+    setMenuOpen(null)
+    setRenamingId(gen.id)
+    setRenameValue(gen.metadata?.label || gen.input.slice(0, 40))
+  }
+
+  const handleRename = async (id: string, currentMetadata: any) => {
+    await supabase
+      .from('generations')
+      .update({ metadata: { ...currentMetadata, label: renameValue } })
+      .eq('id', id)
+    setRenamingId(null)
+    loadHistory()
   }
 
   const handleSend = async () => {
@@ -213,17 +268,86 @@ export default function GeneratePage() {
                 <p className="text-xs text-gray-400 p-4">No history yet</p>
               )}
               {history.map(gen => (
-                <button
-                  key={gen.id}
-                  onClick={() => loadGeneration(gen)}
-                  className="w-full text-left p-3 hover:bg-gray-50 border-b text-xs"
-                >
-                  <p className="font-medium text-gray-900 truncate">{gen.subject} — {gen.task_type}</p>
-                  <p className="text-gray-500 truncate mt-0.5">{gen.input}</p>
-                  <p className="text-gray-400 mt-0.5">
-                    {new Date(gen.created_at).toLocaleDateString()}
-                  </p>
-                </button>
+                <div key={gen.id} className="relative border-b group">
+                  {renamingId === gen.id ? (
+                    <div className="p-2">
+                      <input
+                        autoFocus
+                        value={renameValue}
+                        onChange={e => setRenameValue(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleRename(gen.id, gen.metadata)
+                          if (e.key === 'Escape') setRenamingId(null)
+                        }}
+                        className="w-full border rounded p-1 text-xs text-gray-900"
+                      />
+                      <div className="flex gap-1 mt-1">
+                        <button
+                          onClick={() => handleRename(gen.id, gen.metadata)}
+                          className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setRenamingId(null)}
+                          className="text-xs text-gray-500 px-2 py-0.5 rounded border"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => loadGeneration(gen)}
+                      className="w-full text-left p-3 hover:bg-gray-50 text-xs pr-8"
+                    >
+                      <div className="flex items-center gap-1 mb-0.5">
+                        {gen.metadata?.pinned && <span className="text-blue-500">📌</span>}
+                        <p className="font-medium text-gray-900 truncate">
+                          {gen.metadata?.label || `${gen.subject} — ${gen.task_type}`}
+                        </p>
+                      </div>
+                      <p className="text-gray-500 truncate">{gen.input}</p>
+                      <p className="text-gray-400 mt-0.5">
+                        {new Date(gen.created_at).toLocaleDateString()}
+                      </p>
+                    </button>
+                  )}
+
+                  {/* Three dot menu */}
+                  <button
+                    onClick={e => {
+                      e.stopPropagation()
+                      setMenuOpen(menuOpen === gen.id ? null : gen.id)
+                    }}
+                    className="absolute right-2 top-3 text-gray-400 hover:text-gray-700 opacity-0 group-hover:opacity-100 text-xs px-1"
+                  >
+                    ···
+                  </button>
+
+                  {menuOpen === gen.id && (
+                    <div className="absolute right-0 top-8 z-10 bg-white border rounded-lg shadow-lg w-36 text-xs overflow-hidden">
+                      <button
+                        onClick={e => handlePin(e, gen)}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 text-gray-700"
+                      >
+                        {gen.metadata?.pinned ? '📌 Unpin' : '📌 Pin'}
+                      </button>
+                      <button
+                        onClick={e => startRename(e, gen)}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 text-gray-700"
+                      >
+                        ✏️ Rename
+                      </button>
+                      <button
+                        onClick={e => handleDelete(e, gen.id)}
+                        className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -231,7 +355,6 @@ export default function GeneratePage() {
 
         {/* Chat area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Subject/task selectors */}
           {!started && (
             <div className="p-6 border-b bg-white">
               <p className="text-sm text-gray-700 mb-3">Select your subject and task type to get started:</p>
@@ -258,7 +381,6 @@ export default function GeneratePage() {
             </div>
           )}
 
-          {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {messages.length === 0 && (
               <div className="text-center text-gray-400 mt-20">
@@ -298,7 +420,6 @@ export default function GeneratePage() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Input bar */}
           <div className="p-4 bg-white border-t">
             <div className="flex gap-3 items-end">
               <textarea
