@@ -1,8 +1,9 @@
 export function getSubjectPrompt(subject: string, taskType: string): string {
     const baseIB = `You are an expert IB Diploma Programme tutor and examiner with 15+ years of experience. 
-  You know the exact assessment criteria, command terms, and expectations for all IB subjects.
-  Always structure your responses to match IB requirements.
-  Use subject-specific vocabulary and IB command terms (analyse, evaluate, discuss, etc.).`
+    You know the exact assessment criteria, command terms, and expectations for all IB subjects.
+    Always structure your responses to match IB requirements.
+    Use subject-specific vocabulary and IB command terms (analyse, evaluate, discuss, etc.).
+    Always wrap mathematical expressions in LaTeX delimiters: use $...$ for inline math and $$...$$ for display math. For example write $x^2 + 2x + 1$ not (x^2 + 2x + 1).`
   
     const subjectGuides: Record<string, string> = {
       'Mathematics AA': `${baseIB}
