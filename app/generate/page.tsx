@@ -55,22 +55,27 @@ export default function GeneratePage() {
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const supabase = createClient()
 
-  useEffect(() => {
-    loadHistory()
-  }, [])
+  useEffect(() => { loadHistory() }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   useEffect(() => {
-    const handleClick = () => setMenuOpen(null)
-    document.addEventListener('click', handleClick)
-    return () => document.removeEventListener('click', handleClick)
-  }, [])
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(null)
+      }
+    }
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [menuOpen])
 
   const loadHistory = async () => {
     const { data } = await supabase
@@ -101,6 +106,7 @@ export default function GeneratePage() {
     setInput('')
     setError('')
     setStarted(false)
+    setMenuOpen(null)
   }
 
   const loadGeneration = (gen: Generation) => {
@@ -112,10 +118,10 @@ export default function GeneratePage() {
     ])
     setStarted(true)
     setError('')
+    setMenuOpen(null)
   }
 
-  const handlePin = async (e: React.MouseEvent, gen: Generation) => {
-    e.stopPropagation()
+  const handlePin = async (gen: Generation) => {
     setMenuOpen(null)
     const pinned = !gen.metadata?.pinned
     await supabase
@@ -125,25 +131,24 @@ export default function GeneratePage() {
     loadHistory()
   }
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation()
+  const handleDelete = async (id: string) => {
     setMenuOpen(null)
-    if (!confirm('Delete this chat?')) return
+    if (!confirm('Delete this chat? This cannot be undone.')) return
     await supabase.from('generations').delete().eq('id', id)
     loadHistory()
   }
 
-  const startRename = (e: React.MouseEvent, gen: Generation) => {
-    e.stopPropagation()
+  const startRename = (gen: Generation) => {
     setMenuOpen(null)
     setRenamingId(gen.id)
-    setRenameValue(gen.metadata?.label || gen.input.slice(0, 40))
+    setRenameValue(gen.metadata?.label || `${gen.subject} — ${gen.task_type}`)
   }
 
   const handleRename = async (id: string, currentMetadata: any) => {
+    if (!renameValue.trim()) return
     await supabase
       .from('generations')
-      .update({ metadata: { ...currentMetadata, label: renameValue } })
+      .update({ metadata: { ...currentMetadata, label: renameValue.trim() } })
       .eq('id', id)
     setRenamingId(null)
     loadHistory()
@@ -241,7 +246,9 @@ export default function GeneratePage() {
           >
             ☰
           </button>
-          <h1 className="font-bold text-lg text-blue-600" style={{ fontFamily: 'Georgia, serif' }}>IB Study Tools</h1>
+          <h1 className="font-bold text-lg text-blue-600" style={{ fontFamily: 'Georgia, serif' }}>
+            IB Study Tools
+          </h1>
         </div>
         <div className="flex gap-4 text-sm">
           <a href="/generate" className="font-medium text-blue-600">Generate</a>
@@ -252,6 +259,7 @@ export default function GeneratePage() {
       </nav>
 
       <div className="flex flex-1 overflow-hidden" style={{ height: 'calc(100vh - 65px)' }}>
+
         {/* Sidebar */}
         {sidebarOpen && (
           <div className="w-64 bg-white border-r flex flex-col shrink-0">
@@ -263,12 +271,14 @@ export default function GeneratePage() {
                 + New Chat
               </button>
             </div>
+
             <div className="flex-1 overflow-y-auto">
               {history.length === 0 && (
                 <p className="text-xs text-gray-400 p-4">No history yet</p>
               )}
               {history.map(gen => (
                 <div key={gen.id} className="relative border-b group">
+
                   {renamingId === gen.id ? (
                     <div className="p-2">
                       <input
@@ -297,55 +307,69 @@ export default function GeneratePage() {
                       </div>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => loadGeneration(gen)}
-                      className="w-full text-left p-3 hover:bg-gray-50 text-xs pr-8"
-                    >
-                      <div className="flex items-center gap-1 mb-0.5">
-                        {gen.metadata?.pinned && <span className="text-blue-500">📌</span>}
-                        <p className="font-medium text-gray-900 truncate">
-                          {gen.metadata?.label || `${gen.subject} — ${gen.task_type}`}
+                    <>
+                      <button
+                        onClick={() => loadGeneration(gen)}
+                        className="w-full text-left p-3 hover:bg-gray-50 text-xs pr-8"
+                      >
+                        <div className="flex items-center gap-1 mb-0.5">
+                          {gen.metadata?.pinned && (
+                            <span className="text-blue-500 text-xs">📌</span>
+                          )}
+                          <p className="font-medium text-gray-900 truncate">
+                            {gen.metadata?.label || `${gen.subject} — ${gen.task_type}`}
+                          </p>
+                        </div>
+                        <p className="text-gray-500 truncate">{gen.input}</p>
+                        <p className="text-gray-400 mt-0.5">
+                          {new Date(gen.created_at).toLocaleDateString()}
                         </p>
-                      </div>
-                      <p className="text-gray-500 truncate">{gen.input}</p>
-                      <p className="text-gray-400 mt-0.5">
-                        {new Date(gen.created_at).toLocaleDateString()}
-                      </p>
-                    </button>
-                  )}
+                      </button>
 
-                  {/* Three dot menu */}
-                  <button
-                    onClick={e => {
-                      e.stopPropagation()
-                      setMenuOpen(menuOpen === gen.id ? null : gen.id)
-                    }}
-                    className="absolute right-2 top-3 text-gray-400 hover:text-gray-700 opacity-0 group-hover:opacity-100 text-xs px-1"
-                  >
-                    ···
-                  </button>
+                      {/* Three dot button */}
+                      <button
+                        onMouseDown={e => {
+                          e.stopPropagation()
+                          e.preventDefault()
+                          setMenuOpen(menuOpen === gen.id ? null : gen.id)
+                        }}
+                        className="absolute right-1 top-2.5 w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ···
+                      </button>
 
-                  {menuOpen === gen.id && (
-                    <div className="absolute right-0 top-8 z-10 bg-white border rounded-lg shadow-lg w-36 text-xs overflow-hidden">
-                      <button
-                        onClick={e => handlePin(e, gen)}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-50 text-gray-700"
-                      >
-                        {gen.metadata?.pinned ? '📌 Unpin' : '📌 Pin'}
-                      </button>
-                      <button
-                        onClick={e => startRename(e, gen)}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-50 text-gray-700"
-                      >
-                        ✏️ Rename
-                      </button>
-                      <button
-                        onClick={e => handleDelete(e, gen.id)}
-                        className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600"
-                      >
-                        🗑️ Delete
-                      </button>
-                    </div>
+                      {/* Dropdown menu */}
+                      {menuOpen === gen.id && (
+                        <div
+                          ref={menuRef}
+                          className="absolute right-0 top-9 z-50 bg-white border rounded-xl shadow-lg w-40 overflow-hidden"
+                          onMouseDown={e => e.stopPropagation()}
+                        >
+                          <button
+                            onClick={() => handlePin(gen)}
+                            className="w-full text-left px-3 py-2.5 hover:bg-gray-50 text-gray-700 text-xs flex items-center gap-2"
+                          >
+                            <span>📌</span>
+                            <span>{gen.metadata?.pinned ? 'Unpin' : 'Pin'}</span>
+                          </button>
+                          <button
+                            onClick={() => startRename(gen)}
+                            className="w-full text-left px-3 py-2.5 hover:bg-gray-50 text-gray-700 text-xs flex items-center gap-2"
+                          >
+                            <span>✏️</span>
+                            <span>Rename</span>
+                          </button>
+                          <div className="border-t my-1" />
+                          <button
+                            onClick={() => handleDelete(gen.id)}
+                            className="w-full text-left px-3 py-2.5 hover:bg-red-50 text-red-600 text-xs flex items-center gap-2"
+                          >
+                            <span>🗑️</span>
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               ))}
