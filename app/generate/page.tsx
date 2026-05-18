@@ -2,7 +2,7 @@
 import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -22,6 +22,11 @@ const TASK_TYPES = [
   'Revision Summary', 'Explanation', 'Practice Questions',
 ]
 
+interface Message {
+  role: 'user' | 'assistant'
+  content: string
+}
+
 interface Generation {
   id: string
   subject: string
@@ -34,18 +39,24 @@ interface Generation {
 export default function GeneratePage() {
   const [subject, setSubject] = useState('')
   const [taskType, setTaskType] = useState('')
-  const [prompt, setPrompt] = useState('')
-  const [output, setOutput] = useState('')
+  const [messages, setMessages] = useState<Message[]>([])
+  const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [history, setHistory] = useState<Generation[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [started, setStarted] = useState(false)
+  const bottomRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
     loadHistory()
   }, [])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   const loadHistory = async () => {
     const { data } = await supabase
@@ -65,32 +76,47 @@ export default function GeneratePage() {
   const handleNew = () => {
     setSubject('')
     setTaskType('')
-    setPrompt('')
-    setOutput('')
+    setMessages([])
+    setInput('')
     setError('')
+    setStarted(false)
   }
 
   const loadGeneration = (gen: Generation) => {
     setSubject(gen.subject || '')
     setTaskType(gen.task_type || '')
-    setPrompt(gen.input)
-    setOutput(gen.output)
+    setMessages([
+      { role: 'user', content: gen.input },
+      { role: 'assistant', content: gen.output },
+    ])
+    setStarted(true)
     setError('')
   }
 
-  const handleGenerate = async () => {
-    if (!subject || !taskType || !prompt) {
-      setError('Please fill in all fields')
+  const handleSend = async () => {
+    if (!input.trim()) return
+    if (!started && (!subject || !taskType)) {
+      setError('Please select a subject and task type first')
       return
     }
+
+    const userMessage: Message = { role: 'user', content: input }
+    const newMessages = [...messages, userMessage]
+    setMessages(newMessages)
+    setInput('')
     setLoading(true)
     setError('')
-    setOutput('')
+    setStarted(true)
 
     const res = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject, taskType, prompt }),
+      body: JSON.stringify({
+        subject,
+        taskType,
+        prompt: input,
+        messages: newMessages,
+      }),
     })
 
     if (!res.ok) {
@@ -102,6 +128,8 @@ export default function GeneratePage() {
     const reader = res.body?.getReader()
     const decoder = new TextDecoder()
     let fullOutput = ''
+
+    setMessages(prev => [...prev, { role: 'assistant', content: '' }])
 
     while (reader) {
       const { done, value } = await reader.read()
@@ -115,7 +143,11 @@ export default function GeneratePage() {
           const parsed = JSON.parse(data)
           const text = parsed.choices?.[0]?.delta?.content || ''
           fullOutput += text
-          setOutput(prev => prev + text)
+          setMessages(prev => {
+            const updated = [...prev]
+            updated[updated.length - 1] = { role: 'assistant', content: fullOutput }
+            return updated
+          })
         } catch {}
       }
     }
@@ -127,7 +159,7 @@ export default function GeneratePage() {
         tool: 'generate',
         subject,
         task_type: taskType,
-        input: prompt,
+        input,
         output: fullOutput,
       })
       loadHistory()
@@ -136,8 +168,11 @@ export default function GeneratePage() {
     setLoading(false)
   }
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(output)
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
   }
 
   return (
@@ -146,7 +181,7 @@ export default function GeneratePage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-gray-500 hover:text-gray-900 text-xl font-bold"
+            className="text-gray-500 hover:text-gray-900 text-xl"
           >
             ☰
           </button>
@@ -160,7 +195,7 @@ export default function GeneratePage() {
         </div>
       </nav>
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden" style={{ height: 'calc(100vh - 65px)' }}>
         {/* Sidebar */}
         {sidebarOpen && (
           <div className="w-64 bg-white border-r flex flex-col shrink-0">
@@ -169,7 +204,7 @@ export default function GeneratePage() {
                 onClick={handleNew}
                 className="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700"
               >
-                + New
+                + New Chat
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">
@@ -193,55 +228,92 @@ export default function GeneratePage() {
           </div>
         )}
 
-        {/* Main content */}
-        <div className="flex-1 max-w-3xl mx-auto p-6 space-y-4 w-full">
-          <h2 className="text-xl font-bold text-gray-900">Generate</h2>
-          <p className="text-gray-700 text-sm">AI-powered IB tutor for essays, notes, IA ideas and more.</p>
-
-          {error && (
-            <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm">{error}</div>
-          )}
-
-          <select value={subject} onChange={e => setSubject(e.target.value)}
-            className="w-full border rounded-lg p-3 text-sm bg-white text-gray-900">
-            <option value="">Select subject...</option>
-            {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-
-          <select value={taskType} onChange={e => setTaskType(e.target.value)}
-            className="w-full border rounded-lg p-3 text-sm bg-white text-gray-900">
-            <option value="">Select task type...</option>
-            {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-
-          <textarea
-            value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            placeholder="Describe your task in detail."
-            className="w-full border rounded-lg p-3 h-36 resize-none text-sm text-gray-900 placeholder-gray-400"
-          />
-          <p className="text-xs text-gray-400 text-right">{prompt.length}/2000</p>
-
-          <button onClick={handleGenerate} disabled={loading}
-            className="w-full bg-blue-600 text-white rounded-lg py-3 font-medium hover:bg-blue-700 disabled:opacity-50">
-            {loading ? 'Generating...' : 'Generate'}
-          </button>
-
-          {output && (
-            <div className="bg-white border rounded-lg p-4">
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-sm font-medium text-gray-900">Result</span>
-                <button onClick={copyToClipboard} className="text-xs text-blue-600 hover:underline">
-                  Copy
-                </button>
+        {/* Chat area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Subject/task selectors */}
+          {!started && (
+            <div className="p-6 border-b bg-white">
+              <p className="text-sm text-gray-700 mb-3">Select your subject and task type to get started:</p>
+              <div className="flex gap-3">
+                <select value={subject} onChange={e => setSubject(e.target.value)}
+                  className="flex-1 border rounded-lg p-2 text-sm bg-white text-gray-900">
+                  <option value="">Select subject...</option>
+                  {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <select value={taskType} onChange={e => setTaskType(e.target.value)}
+                  className="flex-1 border rounded-lg p-2 text-sm bg-white text-gray-900">
+                  <option value="">Select task type...</option>
+                  {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
-              <div className="prose prose-sm max-w-none text-gray-900">
-                <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                  {output}
-                </ReactMarkdown>
-              </div>
+              {error && <p className="text-red-600 text-xs mt-2">{error}</p>}
             </div>
           )}
+
+          {started && (
+            <div className="px-4 py-2 bg-white border-b flex items-center gap-2 text-xs text-gray-500">
+              <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{subject}</span>
+              <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded">{taskType}</span>
+            </div>
+          )}
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {messages.length === 0 && (
+              <div className="text-center text-gray-400 mt-20">
+                <p className="text-lg mb-2">👋 Hi! I'm your IB tutor.</p>
+                <p className="text-sm">Select a subject and task type, then ask me anything.</p>
+              </div>
+            )}
+            {messages.map((msg, i) => (
+              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-2xl rounded-2xl px-4 py-3 ${
+                  msg.role === 'user'
+                    ? 'bg-blue-600 text-white text-sm'
+                    : 'bg-white border text-gray-900 text-sm'
+                }`}>
+                  {msg.role === 'assistant' ? (
+                    <div className="prose prose-sm max-w-none text-gray-900">
+                      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p>{msg.content}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div className="flex justify-start">
+                <div className="bg-white border rounded-2xl px-4 py-3 text-sm text-gray-400">
+                  Thinking...
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          {/* Input bar */}
+          <div className="p-4 bg-white border-t">
+            <div className="flex gap-3 items-end">
+              <textarea
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask your IB tutor anything... (Enter to send, Shift+Enter for new line)"
+                className="flex-1 border rounded-xl p-3 text-sm text-gray-900 placeholder-gray-400 resize-none"
+                rows={2}
+              />
+              <button
+                onClick={handleSend}
+                disabled={loading || !input.trim()}
+                className="bg-blue-600 text-white rounded-xl px-4 py-3 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 shrink-0"
+              >
+                Send
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
