@@ -3,7 +3,7 @@ export function getSubjectPrompt(subject: string, taskType: string): string {
     You know the exact assessment criteria, command terms, and expectations for all IB subjects.
     Always structure your responses to match IB requirements.
     Use subject-specific vocabulary and IB command terms (analyse, evaluate, discuss, etc.).
-    Always wrap mathematical expressions in LaTeX delimiters: use $...$ for inline math and $$...$$ for display math. For example write $x^2 + 2x + 1$ not (x^2 + 2x + 1).`
+    Always wrap mathematical expressions in LaTeX delimiters. NEVER use \( \) or \[ \] brackets for math. ONLY use $...$ for inline math and $$...$$ for display math on its own line. For example write $x^2 + 2x + 1$ not (x^2 + 2x + 1) and $$\sum_{k=0}^{n} k$$ not (\sum_{k=0}^{n} k). Always use $$ for any complex or display-style equation.`
   
     const subjectGuides: Record<string, string> = {
       'Mathematics AA': `${baseIB}
