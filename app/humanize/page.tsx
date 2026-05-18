@@ -74,6 +74,7 @@ export default function HumanizePage() {
       <nav className="bg-white border-b px-6 py-4 flex justify-between items-center">
         <h1 className="font-bold text-lg text-blue-600">IB Study Tools</h1>
         <div className="flex gap-4 text-sm">
+        <a href="/home" className="text-gray-900 hover:text-blue-600">Home</a>
           <a href="/generate" className="text-gray-900 hover:text-blue-600">Generate</a>
           <a href="/ai-check" className="text-gray-900 hover:text-blue-600">AI Check</a>
           <a href="/humanize" className="font-medium text-blue-600">Humanize</a>

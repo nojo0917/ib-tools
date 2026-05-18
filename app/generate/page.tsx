@@ -251,6 +251,7 @@ export default function GeneratePage() {
           </h1>
         </div>
         <div className="flex gap-4 text-sm">
+        <a href="/home" className="text-gray-900 hover:text-blue-600">Home</a>
           <a href="/generate" className="font-medium text-blue-600">Generate</a>
           <a href="/ai-check" className="text-gray-900 hover:text-blue-600">AI Check</a>
           <a href="/humanize" className="text-gray-900 hover:text-blue-600">Humanize</a>
