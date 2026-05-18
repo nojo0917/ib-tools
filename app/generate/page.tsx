@@ -1,6 +1,7 @@
 'use client'
 import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
+import remarkGfm from 'remark-gfm'
 import rehypeKatex from 'rehype-katex'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -267,14 +268,17 @@ export default function GeneratePage() {
             )}
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-2xl rounded-2xl px-4 py-3 ${
+                <div className={`max-w-2xl rounded-2xl px-5 py-4 ${
                   msg.role === 'user'
                     ? 'bg-blue-600 text-white text-sm'
-                    : 'bg-white border text-gray-900 text-sm'
+                    : 'bg-white border text-gray-900 text-sm leading-relaxed shadow-sm'
                 }`}>
                   {msg.role === 'assistant' ? (
-                    <div className="prose prose-sm max-w-none text-gray-900">
-                      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                    <div className="prose prose-sm max-w-none text-gray-900 prose-headings:text-gray-900 prose-headings:font-semibold prose-p:leading-relaxed prose-li:leading-relaxed prose-table:text-sm">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkMath, remarkGfm]}
+                        rehypePlugins={[rehypeKatex]}
+                      >
                         {msg.content}
                       </ReactMarkdown>
                     </div>
@@ -286,7 +290,7 @@ export default function GeneratePage() {
             ))}
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-white border rounded-2xl px-4 py-3 text-sm text-gray-400">
+                <div className="bg-white border rounded-2xl px-4 py-3 text-sm text-gray-400 shadow-sm">
                   Thinking...
                 </div>
               </div>
