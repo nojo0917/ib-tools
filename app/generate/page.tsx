@@ -16,11 +16,12 @@ const SUBJECTS = [
   'Theory of Knowledge (TOK)',
   'Extended Essay (EE)',
   'Computer Science',
+  'General Chat',
 ]
 
 const TASK_TYPES = [
   'Essay', 'IA Idea', 'Outline', 'Study Notes',
-  'Revision Summary', 'Explanation', 'Practice Questions',
+  'Revision Summary', 'Explanation', 'Practice Questions', 'Normal Chatting',
 ]
 
 interface Message {

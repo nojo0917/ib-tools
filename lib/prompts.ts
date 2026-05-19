@@ -60,6 +60,10 @@ export function getSubjectPrompt(subject: string, taskType: string): string {
   Focus on political concepts, power, sovereignty, human rights, and development.
   For IAs: the Political Engagement Activity (PEA) — link personal engagement to political theory.
   For essays: use real-world examples, political theorists, and evaluate multiple perspectives.`,
+
+      'General Chat': `${baseIB}
+    Subject: Normal Chat
+    Focus on keeping a casual conversation tone to interact and chat with the user.
     }
   
     return subjectGuides[subject] || `${baseIB}\nSubject: ${subject}\nProvide expert guidance tailored to IB DP standards.`
