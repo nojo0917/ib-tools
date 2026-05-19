@@ -64,18 +64,19 @@ export default function AICheckPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300">
+    <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300">
       
-      {/* --- ADAPTIVE NAVBAR --- */}
+      {/* --- MATCHED NAVBAR --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          
-          {/* BRANDING: Restored font and name */}
-          <Link href="/home" className="text-xl font-bold text-blue-600 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
-            IB Study Tools
-          </Link>
+        <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* Placeholder toggle to match Generate page spacing */}
+            <div className="p-2 text-transparent select-none">⇠</div>
+            <Link href="/home" className="text-xl font-bold text-blue-600 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
+              IB Study Tools
+            </Link>
+          </div>
 
-          {/* CENTERED PILL LINKS */}
           <div className="hidden md:flex items-center gap-1 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl p-1">
             {navLinks.map((link) => {
               const isActive = pathname === link.href
@@ -95,7 +96,6 @@ export default function AICheckPage() {
             })}
           </div>
 
-          {/* LOGOUT */}
           <button 
             onClick={handleLogout}
             className="text-sm font-bold text-slate-400 hover:text-red-500 transition"
@@ -106,97 +106,92 @@ export default function AICheckPage() {
       </nav>
 
       {/* --- PAGE CONTENT --- */}
-      <main className="max-w-3xl mx-auto p-6 pt-12 space-y-8">
-        
-        <header className="space-y-2">
-          <h2 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">AI Check</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-base">
-            Paste text to check if it was AI-generated. Results come from two independent detectors.
-          </p>
-        </header>
-
-        {error && (
-          <div className="bg-red-50 border border-red-100 text-red-600 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 p-4 rounded-xl text-sm font-medium">
-            {error}
-          </div>
-        )}
-
-        <div className="relative group">
-          <textarea
-            value={text}
-            onChange={e => setText(e.target.value)}
-            placeholder="Paste your text here (minimum 50 characters)..."
-            className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-3xl p-6 h-72 resize-none text-base bg-slate-50/50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all shadow-sm"
-          />
-          <div className="absolute bottom-5 right-6 px-3 py-1 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-            {text.length} / 5000
-          </div>
-        </div>
-
-        <button
-          onClick={handleCheck}
-          disabled={loading || text.length < 50}
-          className="w-full bg-slate-900 dark:bg-blue-600 text-white rounded-2xl py-5 font-bold hover:bg-slate-800 dark:hover:bg-blue-700 disabled:opacity-50 transition-all shadow-xl shadow-slate-200 dark:shadow-none active:scale-[0.98]"
-        >
-          {loading ? 'Analyzing patterns...' : 'Analyze Text'}
-        </button>
-
-        {loading && (
-          <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-2xl p-6 text-center animate-pulse">
-            <p className="text-sm text-blue-700 dark:text-blue-400 font-medium">Running deep detection — this may take a few seconds...</p>
-          </div>
-        )}
-
-        {results && (
-          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-8 space-y-8 shadow-2xl shadow-slate-100/50 dark:shadow-none">
-            <div className="text-center bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-8 border border-slate-100 dark:border-slate-700">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Combined AI Probability</p>
-              <p className={`text-7xl font-black tracking-tighter ${getColor(results.average)}`}>
-                {results.average}%
-              </p>
-              <p className={`text-lg font-bold mt-2 uppercase tracking-tight ${getColor(results.average)}`}>
-                {results.averageLabel}
-              </p>
-            </div>
-
-            <div className="space-y-8">
-              {results.detectors.map((d: any) => (
-                <div key={d.service}>
-                  <div className="flex justify-between items-end text-sm mb-3">
-                    <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                      {d.service}
-                      {d.service.toLowerCase().includes('sapling') && (
-                        <span className="bg-blue-600 text-white text-[9px] px-2 py-0.5 rounded-md uppercase tracking-wider font-black">
-                          Pro
-                        </span>
-                      )}
-                    </span>
-                    <span className={`font-bold ${getColor(d.score)}`}>
-                      {d.score >= 0 ? `${d.score}% — ${d.label}` : 'Error'}
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-1000 ${getBarColor(d.score)}`}
-                      style={{ width: `${Math.max(0, d.score)}%` }}
-                    />
-                  </div>
-                  {d.reasoning && (
-                    <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800/30 rounded-xl">
-                       <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                        <span className="text-slate-900 dark:text-slate-200 font-bold mr-1">Analysis:</span> {d.reasoning}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <p className="text-[10px] text-slate-400 text-center border-t border-slate-50 dark:border-slate-800 pt-6 uppercase tracking-[0.2em] font-bold">
-              Data provided by multi-engine neural analysis
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-3xl mx-auto p-6 pt-12 space-y-8">
+          
+          <header className="space-y-2">
+            <h2 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">AI Check</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-base font-medium">
+              Paste text to check if it was AI-generated. Results come from two independent detectors.
             </p>
+          </header>
+
+          {error && (
+            <div className="bg-red-50 border border-red-100 text-red-600 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 p-4 rounded-xl text-sm font-medium">
+              {error}
+            </div>
+          )}
+
+          <div className="relative group">
+            <textarea
+              value={text}
+              onChange={e => setText(e.target.value)}
+              placeholder="Paste your text here (minimum 50 characters)..."
+              className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-3xl p-6 h-72 resize-none text-base bg-slate-50/50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all shadow-sm"
+            />
+            <div className="absolute bottom-5 right-6 px-3 py-1 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              {text.length} / 5000
+            </div>
           </div>
-        )}
+
+          <button
+            onClick={handleCheck}
+            disabled={loading || text.length < 50}
+            className="w-full bg-slate-900 dark:bg-blue-600 text-white rounded-2xl py-5 font-bold hover:opacity-90 transition-all shadow-xl shadow-slate-200 dark:shadow-none active:scale-[0.98]"
+          >
+            {loading ? 'Analyzing patterns...' : 'Analyze Text'}
+          </button>
+
+          {loading && (
+            <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-2xl p-6 text-center animate-pulse">
+              <p className="text-sm text-blue-700 dark:text-blue-400 font-medium">Running deep detection...</p>
+            </div>
+          )}
+
+          {results && (
+            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-8 space-y-8 shadow-2xl shadow-slate-100/50 dark:shadow-none">
+              <div className="text-center bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-8 border border-slate-100 dark:border-slate-700">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Combined AI Probability</p>
+                <p className={`text-7xl font-black tracking-tighter ${getColor(results.average)}`}>
+                  {results.average}%
+                </p>
+                <p className={`text-lg font-bold mt-2 uppercase tracking-tight ${getColor(results.average)}`}>
+                  {results.averageLabel}
+                </p>
+              </div>
+
+              <div className="space-y-8">
+                {results.detectors.map((d: any) => (
+                  <div key={d.service}>
+                    <div className="flex justify-between items-end text-sm mb-3">
+                      <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        {d.service}
+                        {d.service.toLowerCase().includes('sapling') && (
+                          <span className="bg-blue-600 text-white text-[9px] px-2 py-0.5 rounded-md uppercase tracking-wider font-black">
+                            Pro
+                          </span>
+                        )}
+                      </span>
+                      <span className={`font-bold ${getColor(d.score)}`}>
+                        {d.score >= 0 ? `${d.score}% — ${d.label}` : 'Error'}
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-1000 ${getBarColor(d.score)}`}
+                        style={{ width: `${Math.max(0, d.score)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-[10px] text-slate-400 text-center border-t border-slate-50 dark:border-slate-800 pt-6 uppercase tracking-[0.2em] font-bold">
+                Neural analysis engine v2.4
+              </p>
+            </div>
+          )}
+        </div>
       </main>
     </div>
   )
