@@ -55,6 +55,10 @@ export default function GeneratePage() {
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  
+  // NEW: State to track the active chat ID!
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null)
+
   const bottomRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
@@ -108,15 +112,33 @@ export default function GeneratePage() {
     setError('')
     setStarted(false)
     setMenuOpen(null)
+    setCurrentChatId(null) // NEW: Reset the chat ID so the next message starts a fresh row
   }
 
   const loadGeneration = (gen: Generation) => {
     setSubject(gen.subject || '')
     setTaskType(gen.task_type || '')
-    setMessages([
-      { role: 'user', content: gen.input },
-      { role: 'assistant', content: gen.output },
-    ])
+    setCurrentChatId(gen.id) // NEW: Tell the app we are continuing this specific chat
+
+    // NEW: Smart loading that checks if the output contains a full chat history or just a single message
+    try {
+      const parsedHistory = JSON.parse(gen.output)
+      if (Array.isArray(parsedHistory)) {
+        setMessages(parsedHistory)
+      } else {
+        setMessages([
+          { role: 'user', content: gen.input },
+          { role: 'assistant', content: gen.output },
+        ])
+      }
+    } catch {
+      // Fallback for older chats before we added JSON history
+      setMessages([
+        { role: 'user', content: gen.input },
+        { role: 'assistant', content: gen.output },
+      ])
+    }
+
     setStarted(true)
     setError('')
     setMenuOpen(null)
@@ -136,6 +158,7 @@ export default function GeneratePage() {
     setMenuOpen(null)
     if (!confirm('Delete this chat? This cannot be undone.')) return
     await supabase.from('generations').delete().eq('id', id)
+    if (currentChatId === id) handleNew() // NEW: Clear the screen if they delete the active chat
     loadHistory()
   }
 
@@ -162,8 +185,11 @@ export default function GeneratePage() {
       return
     }
 
-    const userMessage: Message = { role: 'user', content: input }
+    // Capture the exact input before we clear it
+    const currentInput = input;
+    const userMessage: Message = { role: 'user', content: currentInput }
     const newMessages = [...messages, userMessage]
+    
     setMessages(newMessages)
     setInput('')
     setLoading(true)
@@ -176,7 +202,7 @@ export default function GeneratePage() {
       body: JSON.stringify({
         subject,
         taskType,
-        prompt: input,
+        prompt: currentInput,
         messages: newMessages,
       }),
     })
@@ -215,15 +241,39 @@ export default function GeneratePage() {
     }
 
     const { data: { user } } = await supabase.auth.getUser()
+    
     if (user && fullOutput) {
-      await supabase.from('generations').insert({
-        user_id: user.id,
-        tool: 'generate',
-        subject,
-        task_type: taskType,
-        input,
-        output: fullOutput,
-      })
+      // NEW: Create the final array of the whole conversation to save
+      const finalConversationHistory = [...newMessages, { role: 'assistant', content: fullOutput }]
+
+      if (currentChatId) {
+        // SCENARIO 1: We are in an active chat. Update the existing row!
+        await supabase
+          .from('generations')
+          .update({
+            output: JSON.stringify(finalConversationHistory) // Save the entire array as JSON
+          })
+          .eq('id', currentChatId)
+      } else {
+        // SCENARIO 2: This is a brand new chat. Insert a new row!
+        const { data } = await supabase
+          .from('generations')
+          .insert({
+            user_id: user.id,
+            tool: 'generate',
+            subject,
+            task_type: taskType,
+            input: currentInput, // Keep the very first message as the input (used for sidebar preview text)
+            output: JSON.stringify(finalConversationHistory), // Save the entire array as JSON
+          })
+          .select()
+          .single()
+
+        // Track the newly created ID so the next message updates it instead of multiplying
+        if (data) {
+          setCurrentChatId(data.id)
+        }
+      }
       loadHistory()
     }
 
@@ -238,9 +288,7 @@ export default function GeneratePage() {
   }
 
   return (
-    // NEW: Applied deep blue gradient background and white text globally
     <div className="min-h-screen flex flex-col text-white bg-gradient-to-br from-[#15284c] to-[#0a1128]">
-      {/* NEW: Navbar is now transparent with white borders/text */}
       <nav className="border-b border-white/10 px-6 py-4 flex justify-between items-center bg-black/10 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <button
@@ -264,8 +312,6 @@ export default function GeneratePage() {
 
       <div className="flex flex-1 overflow-hidden" style={{ height: 'calc(100vh - 65px)' }}>
 
-        {/* Sidebar */}
-        {/* NEW: Sidebar uses glassmorphism (translucent dark bg) instead of solid white */}
         {sidebarOpen && (
           <div className="w-64 border-r border-white/10 flex flex-col shrink-0 bg-black/20">
             <div className="p-3 border-b border-white/10">
@@ -313,10 +359,9 @@ export default function GeneratePage() {
                     </div>
                   ) : (
                     <>
-                      {/* NEW: Adjusted hover states for dark mode */}
                       <button
                         onClick={() => loadGeneration(gen)}
-                        className="w-full text-left p-3 hover:bg-white/5 text-xs pr-8 transition"
+                        className={`w-full text-left p-3 hover:bg-white/5 text-xs pr-8 transition ${currentChatId === gen.id ? 'bg-white/5 border-l-2 border-blue-500' : ''}`}
                       >
                         <div className="flex items-center gap-1 mb-0.5">
                           {gen.metadata?.pinned && (
@@ -381,13 +426,11 @@ export default function GeneratePage() {
           </div>
         )}
 
-        {/* Chat area */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {!started && (
             <div className="p-6 border-b border-white/10 bg-black/10">
               <p className="text-sm text-gray-300 mb-3">Select your subject and task type to get started:</p>
               <div className="flex gap-3">
-                {/* NEW: Styled dropdowns for dark theme */}
                 <select value={subject} onChange={e => setSubject(e.target.value)}
                   className="flex-1 border border-white/20 rounded-lg p-2 text-sm bg-[#0f172a] text-white focus:outline-none focus:border-blue-500">
                   <option value="">Select subject...</option>
@@ -419,7 +462,6 @@ export default function GeneratePage() {
             )}
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {/* NEW: Chat bubbles adapted for dark mode */}
                 <div className={`max-w-2xl rounded-2xl px-5 py-4 ${
                   msg.role === 'user'
                     ? 'bg-blue-600 text-white text-sm'
@@ -450,7 +492,6 @@ export default function GeneratePage() {
             <div ref={bottomRef} />
           </div>
 
-          {/* NEW: Input area styled for dark theme */}
           <div className="p-4 border-t border-white/10 bg-black/10 backdrop-blur-md">
             <div className="flex gap-3 items-end">
               <textarea
