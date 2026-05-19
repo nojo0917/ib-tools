@@ -86,8 +86,8 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
         </nav>
 
         <div className="sidebar-footer">
-          {/* UPDATED: Highly visible Exit Button pointing to /home */}
-          <Link 
+          {/* Fixed Exit Button: Uses <a> tag to force page reload and clear CSS */}
+          <a 
             href="/home" 
             style={{ 
               display: 'flex', 
@@ -96,8 +96,8 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
               gap: '8px', 
               width: '100%', 
               padding: '10px', 
-              backgroundColor: '#e2e8f0', // Light gray background to make it pop
-              color: '#0f172a', // Dark text for contrast
+              backgroundColor: '#e2e8f0', 
+              color: '#0f172a', 
               borderRadius: '6px', 
               fontWeight: '600',
               marginBottom: '16px',
@@ -107,7 +107,7 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
           >
             <i className="ti ti-arrow-left" aria-hidden="true" />
             Back to Home
-          </Link>
+          </a>
 
           <button className="logout-btn" onClick={handleSignOut}>
             <i className="ti ti-logout" aria-hidden="true" />
