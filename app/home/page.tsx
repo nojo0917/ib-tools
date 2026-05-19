@@ -58,7 +58,7 @@ export default function HomePage() {
           className="text-4xl sm:text-6xl font-bold text-gray-900 dark:text-white mb-4 text-center leading-tight tracking-tight"
           style={{ fontFamily: 'Georgia, serif' }}
         >
-          Your AI Study Tutor
+          Your AI Study Tools
         </h2>
         <p className="text-gray-600 dark:text-blue-100/80 text-lg mb-16 text-center max-w-xl leading-relaxed">
           Four powerful tools designed to help you study smarter, <br className="hidden sm:block" /> write better, and understand deeper.

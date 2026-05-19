@@ -127,29 +127,37 @@ export default function GeneratePage() {
         const { done, value } = await reader.read(); 
         if (done) break
         
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n').filter(l => l.startsWith('data: '))
+        // Use stream: true to handle fragments of multi-byte characters
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split('\n');
         
         for (const line of lines) {
-          const data = line.replace('data: ', '')
-          if (data === '[DONE]') break
+          const trimmedLine = line.trim();
+          if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue;
+          
+          const data = trimmedLine.replace('data: ', '');
+          if (data === '[DONE]') break;
+          
           try {
-            const parsed = JSON.parse(data)
-            const text = parsed.choices?.[0]?.delta?.content || ''
-            fullOutput += text
-            setMessages(prev => {
-              const updated = [...prev]
-              updated[updated.length - 1] = { role: 'assistant', content: fullOutput }
-              return updated
-            })
-          } catch (e) {}
+            const parsed = JSON.parse(data);
+            const text = parsed.choices?.[0]?.delta?.content || '';
+            if (text) {
+              fullOutput += text;
+              setMessages(prev => {
+                const updated = [...prev];
+                updated[updated.length - 1] = { ...updated[updated.length - 1], content: fullOutput };
+                return updated;
+              });
+            }
+          } catch (e) {
+            // Ignore parse errors for incomplete JSON chunks
+          }
         }
       }
 
       // Finalizing: Save to database
       const { data: { user } } = await supabase.auth.getUser()
       if (user && fullOutput) {
-        // We reconstruct history using the fullOutput gathered during the stream
         const finalChatHistory = [...messages, userMessage, { role: 'assistant', content: fullOutput }].filter(m => m.role !== 'system');
         
         if (currentChatId) {
@@ -181,7 +189,6 @@ export default function GeneratePage() {
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
-            {/* MATCHING W-14 SPACER FOR PERFECT LOGO ALIGNMENT */}
             <div className="w-14 flex items-center"> 
                 <button 
                     onClick={() => setSidebarOpen(!sidebarOpen)} 
