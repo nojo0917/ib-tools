@@ -61,7 +61,7 @@ export default function HomePage() {
           className="text-4xl font-bold text-white mb-3 text-center leading-tight"
           style={{ fontFamily: 'Georgia, serif' }}
         >
-          Your AI Study Companion
+          Your AI Study Tutor
         </h2>
         <p className="text-blue-100 text-sm mb-14 text-center max-w-md leading-relaxed">
           Three powerful tools to help you study smarter, write better, and understand deeper.
@@ -121,7 +121,7 @@ export default function HomePage() {
         </div>
 
         <p className="mt-14 text-xs text-blue-300 opacity-50 text-center">
-          Free for all IB students · Powered by AI
+          For all IB students · Powered by AI
         </p>
       </div>
     </div>
