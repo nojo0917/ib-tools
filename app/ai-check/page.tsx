@@ -54,20 +54,17 @@ export default function PastPapersPage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300">
       
-      {/* --- MATCHED NAVBAR --- */}
+      {/* --- STRICTLY MATCHED NAVBAR --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between relative">
+        {/* Changed to px-6 to exactly match AI Check */}
+        <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           
           <div className="flex items-center">
-            {/* CRITICAL FIX: 
-               This container is exactly 56px wide (w-14). 
-               The button is absolute, so the 'IB Study Tools' text 
-               starts at the EXACT same pixel as your AI Check page.
-            */}
-            <div className="w-14 flex items-center relative">
+            {/* Exactly w-14 as a block element, matching the spacer in AI Check */}
+            <div className="w-14 flex items-center">
                <button 
                   onClick={() => setSidebarOpen(!sidebarOpen)} 
-                  className="absolute left-0 flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                  className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all shadow-sm"
                >
                  <span className={`text-lg font-bold transition-transform duration-300 ${sidebarOpen ? 'rotate-0' : 'rotate-180'}`}>
                    {sidebarOpen ? '←' : '→'}
@@ -75,7 +72,7 @@ export default function PastPapersPage() {
                </button>
             </div>
             
-            {/* Standardized Font: Georgia + Color: Blue/White */}
+            {/* Forced Georgia Font exactly as it is in AI Check */}
             <Link 
               href="/home" 
               className="text-xl font-bold text-blue-600 dark:text-white" 
@@ -85,7 +82,6 @@ export default function PastPapersPage() {
             </Link>
           </div>
 
-          {/* Centered Pill Navigation */}
           <div className="hidden md:flex items-center gap-1 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl p-1">
             {navLinks.map((link) => (
                 <Link 
@@ -102,14 +98,13 @@ export default function PastPapersPage() {
             ))}
           </div>
 
-          <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-red-500 transition shrink-0">
+          <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-red-500 transition">
             Logout
           </button>
         </div>
       </nav>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* --- SIDEBAR --- */}
         {sidebarOpen && (
           <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0 animate-in slide-in-from-left duration-200">
             <div className="p-6 space-y-6">
