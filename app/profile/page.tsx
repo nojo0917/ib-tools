@@ -1,12 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function ProfilePage() {
   const supabase = createClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
+  
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -14,6 +18,7 @@ export default function ProfilePage() {
     role: 'Student',
     school: '',
     bio: '',
+    avatarUrl: '', // NEW: Added avatar tracking
   })
 
   useEffect(() => {
@@ -28,6 +33,7 @@ export default function ProfilePage() {
         role: meta.role ?? 'Student',
         school: meta.school ?? '',
         bio: meta.bio ?? '',
+        avatarUrl: meta.avatar_url ?? '', // NEW: Fetch existing avatar
       })
     })
   }, [supabase])
@@ -35,6 +41,47 @@ export default function ProfilePage() {
   function showToast(msg: string, type: 'success' | 'error' = 'success') {
     setToast({ msg, type })
     setTimeout(() => setToast(null), 3000)
+  }
+
+  // NEW: Function to handle the actual file upload to Supabase Storage
+  async function uploadAvatar(event: React.ChangeEvent<HTMLInputElement>) {
+    try {
+      setUploading(true)
+      
+      if (!event.target.files || event.target.files.length === 0) {
+        throw new Error('You must select an image to upload.')
+      }
+
+      const file = event.target.files[0]
+      const fileExt = file.name.split('.').pop()
+      const filePath = `avatar-${Math.random()}.${fileExt}`
+
+      // Upload to the 'avatars' bucket
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file)
+
+      if (uploadError) {
+        throw uploadError
+      }
+
+      // Get the public URL for the newly uploaded image
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath)
+
+      // Update the form state with the new URL
+      setForm({ ...form, avatarUrl: data.publicUrl })
+      showToast('Photo uploaded! Click save to apply changes.', 'success')
+      
+    } catch (error: any) {
+      showToast(error.message || 'Error uploading image. Make sure your "avatars" bucket exists.', 'error')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  // NEW: Function to remove the photo
+  function removeAvatar() {
+    setForm({ ...form, avatarUrl: '' })
   }
 
   async function handleSave() {
@@ -45,6 +92,7 @@ export default function ProfilePage() {
         role: form.role,
         school: form.school,
         bio: form.bio,
+        avatar_url: form.avatarUrl, // NEW: Save the avatar URL to user metadata
       },
     })
     setLoading(false)
@@ -62,12 +110,41 @@ export default function ProfilePage() {
 
       <div className="section">
         <div className="avatar-edit-row">
-          <div className="avatar-lg">{initials}</div>
+          <div className="avatar-lg">
+            {/* NEW: Show the image if it exists, otherwise show initials */}
+            {form.avatarUrl ? (
+              <img src={form.avatarUrl} alt="Profile" className="avatar-img" />
+            ) : (
+              initials
+            )}
+          </div>
+          
           <div className="avatar-actions">
-            <button className="btn btn-ghost">
-              <i className="ti ti-upload" aria-hidden="true" /> Upload photo
+            {/* NEW: Hidden file input */}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={uploadAvatar} 
+              accept="image/*" 
+              hidden 
+            />
+            
+            {/* NEW: Button triggers the hidden input click */}
+            <button 
+              className="btn btn-ghost" 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              <i className="ti ti-upload" aria-hidden="true" /> 
+              {uploading ? 'Uploading...' : 'Upload photo'}
             </button>
-            <button className="btn btn-ghost" style={{ color: 'var(--danger)' }}>
+            
+            <button 
+              className="btn btn-ghost" 
+              style={{ color: 'var(--danger)' }}
+              onClick={removeAvatar}
+              disabled={!form.avatarUrl}
+            >
               Remove
             </button>
           </div>
@@ -155,6 +232,10 @@ export default function ProfilePage() {
           background: linear-gradient(135deg, #3B82F6, #8B5CF6);
           display: flex; align-items: center; justify-content: center;
           font-size: 22px; font-weight: 700; color: #fff; flex-shrink: 0;
+          overflow: hidden; /* NEW: Keeps the image inside the circle */
+        }
+        .avatar-img {
+          width: 100%; height: 100%; object-fit: cover;
         }
         .avatar-actions { display: flex; flex-direction: column; gap: 6px; }
       `}</style>
