@@ -12,7 +12,6 @@ export async function POST(req: NextRequest) {
   const { success } = await checkRateLimit(user.id, 'generate')
   if (!success) return new Response('Rate limit exceeded. Try again in an hour.', { status: 429 })
 
-  // Pulling 'messages' from the request as well to maintain history
   const { subject, taskType, prompt, messages } = await req.json()
   
   if (!subject || !taskType || !prompt) {
@@ -22,13 +21,23 @@ export async function POST(req: NextRequest) {
     return new Response('Prompt too long (max 2000 characters)', { status: 400 })
   }
 
-  const systemPrompt = getSubjectPrompt(subject, taskType)
+  // Get the base system prompt for the subject
+  const baseSystemPrompt = getSubjectPrompt(subject, taskType)
 
-  // We use the messages sent from the frontend if they exist, 
-  // otherwise we fall back to the basic system + user structure.
-  const apiMessages = messages || [
-    { role: 'system', content: systemPrompt },
-    { role: 'user', content: `Task: ${taskType}\n\n${prompt}` },
+  // Append strict formatting rules to ensure math doesn't break
+  const strictInstructions = `
+    IMPORTANT: You are a professional IB Tutor. 
+    1. Language: Use perfect academic English. No gibberish or random tokens.
+    2. Math: Use LaTeX for ALL math. 
+       - Inline: $expression$ 
+       - Block/Fractions: $$expression$$
+    3. Output: Be concise and structured.
+  `;
+
+  // Construct messages: Ensure the system prompt is ALWAYS first
+  const apiMessages = [
+    { role: 'system', content: baseSystemPrompt + strictInstructions },
+    ...(messages?.filter((m: any) => m.role !== 'system') || [{ role: 'user', content: `Task: ${taskType}\n\n${prompt}` }])
   ];
 
   const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -37,23 +46,23 @@ export async function POST(req: NextRequest) {
       'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+      'X-Title': 'IB Study Tools',
     },
     body: JSON.stringify({
-      // Consider switching to 'meta-llama/llama-3-8b-instruct:free' if gibberish continues
-      model: 'openai/gpt-oss-120b:free', 
+      // Llama 3.1 is significantly more stable than the OSS-120B model
+      model: 'meta-llama/llama-3.1-8b-instruct:free', 
       stream: true,
       messages: apiMessages,
-      temperature: 0.7,     // <--- ADDED: Lowers "creativity" to stop gibberish
-      top_p: 0.9,           // <--- ADDED: Helps pick more sensible words
-      max_tokens: 1500,     // <--- ADDED: Ensures the response doesn't cut off
+      temperature: 0.5,     // Lowered further for maximum stability and math accuracy
+      top_p: 1,
+      max_tokens: 2000,
+      repetition_penalty: 1.1 // Prevents the AI from getting stuck in loops
     }),
   })
 
-  console.log('OpenRouter status:', aiResponse.status)
-
   if (!aiResponse.ok) {
     const errText = await aiResponse.text()
-    console.log('OpenRouter error:', errText)
+    console.error('OpenRouter error:', errText)
     return new Response(errText, { status: aiResponse.status })
   }
 
