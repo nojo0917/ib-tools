@@ -12,8 +12,12 @@ const SUBJECTS = [
 ]
 
 interface Paper {
-  id: string; subject: string; title: string; year: number;
-  paper_type: string; file_url: string;
+  id: string; 
+  subject: string; 
+  title: string; 
+  year: number;
+  paper_type: string; 
+  file_url: string;
 }
 
 export default function PastPapersPage() {
@@ -36,13 +40,17 @@ export default function PastPapersPage() {
   ]
 
   useEffect(() => { loadPapers() }, [])
+  
   useEffect(() => {
     setFiltered(subject === 'All Subjects' ? papers : papers.filter(p => p.subject === subject))
   }, [subject, papers])
 
   const loadPapers = async () => {
     const { data } = await supabase.from('past_papers').select('*').order('year', { ascending: false })
-    if (data) { setPapers(data); setFiltered(data); }
+    if (data) { 
+      setPapers(data)
+      setFiltered(data) 
+    }
     setLoading(false)
   }
 
@@ -54,26 +62,26 @@ export default function PastPapersPage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors">
       
-      {/* --- MATCHED NAVBAR DIMENSIONS --- */}
+      {/* --- STANDARDIZED NAVBAR --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100 dark:border-slate-800">
-        <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-8 h-16 flex items-center justify-between">
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             <button 
                 onClick={() => setSidebarOpen(!sidebarOpen)} 
-                className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all shadow-sm shrink-0"
             >
               <span className={`text-lg font-bold transition-transform duration-300 ${sidebarOpen ? 'rotate-0' : 'rotate-180'}`}>
                 {sidebarOpen ? '←' : '→'}
               </span>
             </button>
-            {/* Font matched to AI Check screenshot style */}
-            <Link href="/home" className="text-xl font-bold tracking-tight dark:text-white text-slate-900">
+            
+            <Link href="/home" className="text-xl font-bold tracking-tight text-slate-900 dark:text-white whitespace-nowrap">
               IB Study Tools
             </Link>
           </div>
 
-          {/* Pill Nav matched to AI Check screenshot */}
+          {/* Centered Pill Navigation */}
           <div className="hidden md:flex items-center gap-1 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl p-1">
             {navLinks.map((link) => (
                 <Link 
@@ -90,13 +98,17 @@ export default function PastPapersPage() {
             ))}
           </div>
 
-          <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-red-500 transition-colors">
+          <button 
+            onClick={handleLogout} 
+            className="text-sm font-bold text-slate-400 hover:text-red-500 transition-colors shrink-0"
+          >
             Logout
           </button>
         </div>
       </nav>
 
       <div className="flex flex-1 overflow-hidden">
+        {/* --- SIDEBAR --- */}
         {sidebarOpen && (
           <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0">
             <div className="p-6 space-y-6">
@@ -114,8 +126,9 @@ export default function PastPapersPage() {
           </aside>
         )}
 
-        <main className="flex-1 overflow-y-auto bg-white dark:bg-[#0f172a] p-8">
-          <div className="max-w-4xl mx-auto space-y-8">
+        {/* --- MAIN CONTENT --- */}
+        <main className="flex-1 overflow-y-auto bg-white dark:bg-[#0f172a] p-8 lg:p-12">
+          <div className="max-w-5xl mx-auto space-y-10">
             <header>
               <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-2">Past Papers</h2>
               <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Archive of official IB examination papers.</p>
@@ -126,13 +139,15 @@ export default function PastPapersPage() {
                 <span>📄</span> Loading papers...
               </div>
             ) : filtered.length === 0 ? (
-              <div className="text-center py-24 bg-slate-50 dark:bg-slate-900/50 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
+              <div className="text-center py-24 bg-slate-50 dark:bg-slate-900/40 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
+                <p className="text-5xl mb-4">📂</p>
                 <p className="text-xl font-black text-slate-900 dark:text-white">No papers found for this subject.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Try adjusting your filters in the sidebar.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 {filtered.map(paper => (
-                  <div key={paper.id} className="group flex flex-col bg-white dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm hover:shadow-xl transition-all duration-300">
+                  <div key={paper.id} className="group flex flex-col bg-white dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm hover:shadow-xl hover:border-blue-500 dark:hover:border-blue-500 transition-all duration-300">
                     <div className="mb-6">
                       <p className="text-[10px] uppercase tracking-widest text-blue-600 dark:text-blue-400 font-black mb-3">{paper.subject}</p>
                       <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight mb-4">{paper.title}</h3>
