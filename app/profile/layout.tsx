@@ -86,14 +86,27 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
         </nav>
 
         <div className="sidebar-footer">
-          {/* NEW: Exit Profile Button */}
+          {/* UPDATED: Highly visible Exit Button pointing to /home */}
           <Link 
-            href="/" 
-            className="nav-item" 
-            style={{ marginBottom: '12px' }}
+            href="/home" 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              gap: '8px', 
+              width: '100%', 
+              padding: '10px', 
+              backgroundColor: '#e2e8f0', // Light gray background to make it pop
+              color: '#0f172a', // Dark text for contrast
+              borderRadius: '6px', 
+              fontWeight: '600',
+              marginBottom: '16px',
+              textDecoration: 'none',
+              border: '1px solid #cbd5e1'
+            }}
           >
             <i className="ti ti-arrow-left" aria-hidden="true" />
-            Exit Profile
+            Back to Home
           </Link>
 
           <button className="logout-btn" onClick={handleSignOut}>
