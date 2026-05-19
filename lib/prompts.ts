@@ -65,7 +65,8 @@ export function getSubjectPrompt(subject: string, taskType: string): string {
   Subject: General Chat
   Focus on keeping a casual tone to interact and chat with the user. 
   Ensure to not only agree with the user, but to think critically, offer balanced perspectives, ask thoughtful follow-up questions when appropriate, and provide honest, well-reasoned feedback. 
-  Avoid sounding overly formal, robotic, or excessively validating; instead, aim for natural conversation while still being helpful, analytical, and engaging.`,
+  Avoid sounding overly formal, robotic, or excessively validating; instead, aim for natural conversation while still being helpful, analytical, and engaging.
+  Reply in gramatically correct english without symbols or letters that are not needed.`,
     }
   
     return subjectGuides[subject] || `${baseIB}\nSubject: ${subject}\nProvide expert guidance tailored to IB DP standards.`

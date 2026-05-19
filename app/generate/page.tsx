@@ -20,7 +20,8 @@ const TASK_TYPES = [
   'Revision Summary', 'Explanation', 'Practice Questions', 'Normal Chatting',
 ]
 
-interface Message { role: 'user' | 'assistant'; content: string }
+// Added 'system' to role to handle instructions properly
+interface Message { role: 'user' | 'assistant' | 'system'; content: string }
 interface Generation {
   id: string; subject: string; task_type: string; input: string;
   output: string; created_at: string; metadata?: { pinned?: boolean; label?: string }
@@ -88,18 +89,37 @@ export default function GeneratePage() {
 
   const handleSend = async () => {
     if (!input.trim()) return
-    if (!currentChatId && (!subject || !taskType)) {
+    if (!started && (!subject || !taskType)) {
       setError('Select subject and task type'); return
     }
 
-    const currentInput = input; const userMessage: Message = { role: 'user', content: currentInput }
-    const newMessages = [...messages, userMessage]
-    setMessages(newMessages); setInput(''); setLoading(true); setStarted(true)
+    const currentInput = input; 
+    const userMessage: Message = { role: 'user', content: currentInput }
+    
+    // Logic to prevent gibberish: Inject a hidden system prompt for context if this is the start
+    let messagesForAPI = [...messages];
+    if (messagesForAPI.length === 0) {
+        messagesForAPI.push({
+            role: 'system',
+            content: `You are an expert IB Tutor. The current session is for ${subject} - ${taskType}. Use professional, clear academic English. Avoid hallucinating news or random strings.`
+        });
+    }
+    messagesForAPI.push(userMessage);
+
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setLoading(true);
+    setStarted(true);
 
     const res = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject, taskType, prompt: currentInput, messages: newMessages }),
+      body: JSON.stringify({ 
+        subject, 
+        taskType, 
+        prompt: currentInput, 
+        messages: messagesForAPI // Send the history including system prompt
+      }),
     })
 
     if (!res.ok) { setError('Stream error'); setLoading(false); return }
@@ -127,11 +147,12 @@ export default function GeneratePage() {
 
     const { data: { user } } = await supabase.auth.getUser()
     if (user && fullOutput) {
-      const historyLog = [...newMessages, { role: 'assistant', content: fullOutput }]
+      // Filter out system messages before saving to DB to keep history clean
+      const saveHistory = [...messages, userMessage, { role: 'assistant', content: fullOutput }].filter(m => m.role !== 'system');
       if (currentChatId) {
-        await supabase.from('generations').update({ output: JSON.stringify(historyLog) }).eq('id', currentChatId)
+        await supabase.from('generations').update({ output: JSON.stringify(saveHistory) }).eq('id', currentChatId)
       } else {
-        const { data } = await supabase.from('generations').insert({ user_id: user.id, tool: 'generate', subject, task_type: taskType, input: currentInput, output: JSON.stringify(historyLog) }).select().single()
+        const { data } = await supabase.from('generations').insert({ user_id: user.id, tool: 'generate', subject, task_type: taskType, input: currentInput, output: JSON.stringify(saveHistory) }).select().single()
         if (data) setCurrentChatId(data.id)
       }
       loadHistory()
@@ -146,7 +167,6 @@ export default function GeneratePage() {
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {/* MORE OBVIOUS SIDEBAR TOGGLE */}
             <button 
                 onClick={() => setSidebarOpen(!sidebarOpen)} 
                 className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all shadow-sm group"
@@ -190,7 +210,7 @@ export default function GeneratePage() {
               {history.map(gen => (
                 <button key={gen.id} onClick={() => loadGeneration(gen)} className={`w-full text-left p-3 rounded-xl transition-all group relative ${currentChatId === gen.id ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
                   <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate pr-4">
-                    {gen.metadata?.pinned && '📌 '}{gen.metadata?.label || `${gen.subject} — ${gen.task_type}`}
+                    {gen.subject} — {gen.task_type}
                   </p>
                   <p className="text-[10px] text-slate-400 truncate mt-1">{gen.input}</p>
                   <span onClick={(e) => { e.stopPropagation(); handleDelete(gen.id) }} className="absolute right-2 top-3 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 text-xs transition">✕</span>
@@ -202,7 +222,6 @@ export default function GeneratePage() {
 
         {/* --- MAIN CHAT AREA --- */}
         <main className="flex-1 flex flex-col relative bg-white dark:bg-[#0f172a]">
-          {/* SETUP SCREEN FIX: Only show if not started */}
           {!started && (
             <div className="absolute inset-0 flex items-center justify-center p-6 z-40 bg-white dark:bg-[#0f172a]">
               <div className="max-w-md w-full space-y-8 text-center animate-in fade-in zoom-in duration-300">
@@ -234,7 +253,7 @@ export default function GeneratePage() {
 
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
             <div className="max-w-4xl mx-auto space-y-8 pb-32">
-              {messages.map((msg, i) => (
+              {messages.filter(m => m.role !== 'system').map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[85%] rounded-3xl px-6 py-4 shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200'}`}>
                     {msg.role === 'assistant' ? (
@@ -252,7 +271,6 @@ export default function GeneratePage() {
             </div>
           </div>
 
-          {/* INPUT FIELD - Now properly sticky and accessible */}
           <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-xl z-30">
             <div className="max-w-4xl mx-auto flex gap-4 items-end bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-2 focus-within:ring-4 focus-within:ring-blue-500/5 transition-all">
               <textarea 

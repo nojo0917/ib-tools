@@ -12,7 +12,9 @@ export async function POST(req: NextRequest) {
   const { success } = await checkRateLimit(user.id, 'generate')
   if (!success) return new Response('Rate limit exceeded. Try again in an hour.', { status: 429 })
 
-  const { subject, taskType, prompt } = await req.json()
+  // Pulling 'messages' from the request as well to maintain history
+  const { subject, taskType, prompt, messages } = await req.json()
+  
   if (!subject || !taskType || !prompt) {
     return new Response('Missing fields', { status: 400 })
   }
@@ -22,6 +24,13 @@ export async function POST(req: NextRequest) {
 
   const systemPrompt = getSubjectPrompt(subject, taskType)
 
+  // We use the messages sent from the frontend if they exist, 
+  // otherwise we fall back to the basic system + user structure.
+  const apiMessages = messages || [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: `Task: ${taskType}\n\n${prompt}` },
+  ];
+
   const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -30,12 +39,13 @@ export async function POST(req: NextRequest) {
       'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
     },
     body: JSON.stringify({
-        model: 'openai/gpt-oss-120b:free',
+      // Consider switching to 'meta-llama/llama-3-8b-instruct:free' if gibberish continues
+      model: 'openai/gpt-oss-120b:free', 
       stream: true,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Task: ${taskType}\n\n${prompt}` },
-      ],
+      messages: apiMessages,
+      temperature: 0.7,     // <--- ADDED: Lowers "creativity" to stop gibberish
+      top_p: 0.9,           // <--- ADDED: Helps pick more sensible words
+      max_tokens: 1500,     // <--- ADDED: Ensures the response doesn't cut off
     }),
   })
 
