@@ -61,10 +61,11 @@ export default function HomePage() {
           Your AI Study Tutor
         </h2>
         <p className="text-gray-600 dark:text-blue-100/80 text-lg mb-16 text-center max-w-xl leading-relaxed">
-          Three powerful tools designed to help you study smarter, <br className="hidden sm:block" /> write better, and understand deeper.
+          Four powerful tools designed to help you study smarter, <br className="hidden sm:block" /> write better, and understand deeper.
         </p>
 
-        <div className="grid grid-cols-1 gap-8 w-full max-w-5xl sm:grid-cols-3">
+        {/* Updated grid to support 4 items: grid-cols-1 (mobile), sm:grid-cols-2 (tablet), lg:grid-cols-4 (desktop) */}
+        <div className="grid grid-cols-1 gap-8 w-full max-w-7xl sm:grid-cols-2 lg:grid-cols-4">
           
           {[
             { 
@@ -87,27 +88,34 @@ export default function HomePage() {
               desc: 'Rewrite AI text to sound natural and genuine. Choose from 5 different writing styles.',
               link: '/humanize',
               cta: 'Rewrite text'
+            },
+            { 
+              title: 'Past Papers', 
+              emoji: '📄', 
+              desc: 'Browse and download IB past papers by subject and year in our verified database.',
+              link: '/past-papers',
+              cta: 'Browse papers'
             }
           ].map((card) => (
             <button
               key={card.title}
               onClick={() => router.push(card.link)}
-              /* FIX: Increased border from gray-100 to gray-300 for visibility.
-                 Added a darker md shadow for a more defined card depth.
-              */
-              className="group relative bg-white dark:bg-white/[0.03] border-2 border-gray-300 dark:border-white/10 rounded-[2rem] p-8 text-left shadow-md dark:shadow-none hover:shadow-2xl dark:hover:bg-white/[0.07] dark:hover:border-white/20 transition-all duration-500 hover:-translate-y-2 overflow-hidden"
+              className="group relative bg-white dark:bg-white/[0.03] border-2 border-gray-300 dark:border-white/10 rounded-[2rem] p-8 text-left shadow-md dark:shadow-none hover:shadow-2xl dark:hover:bg-white/[0.07] dark:hover:border-white/20 transition-all duration-500 hover:-translate-y-2 overflow-hidden flex flex-col justify-between"
             >
-              {/* Card Hover Glow */}
-              <div className="absolute -right-10 -top-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-500" />
+              <div>
+                {/* Card Hover Glow */}
+                <div className="absolute -right-10 -top-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-500" />
+                
+                <div className="text-4xl mb-6 transform group-hover:scale-110 transition-transform duration-500">{card.emoji}</div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  {card.title}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                  {card.desc}
+                </p>
+              </div>
               
-              <div className="text-4xl mb-6 transform group-hover:scale-110 transition-transform duration-500">{card.emoji}</div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                {card.title}
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-8">
-                {card.desc}
-              </p>
-              <div className="text-xs text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest flex items-center gap-2 group-hover:gap-4 transition-all">
+              <div className="mt-8 text-xs text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest flex items-center gap-2 group-hover:gap-4 transition-all">
                 {card.cta} <span>→</span>
               </div>
             </button>

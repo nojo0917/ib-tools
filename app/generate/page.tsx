@@ -247,6 +247,8 @@ export default function GeneratePage() {
           <a href="/generate" className="text-blue-600 dark:text-white border-b-2 border-blue-600 dark:border-white pb-1">Generate</a>
           <a href="/ai-check" className="text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-white transition">AI Check</a>
           <a href="/humanize" className="text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-white transition">Humanize</a>
+          {/* NEW: Past Papers Link */}
+          <a href="/past-papers" className="text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-white transition">Past Papers</a>
           <button onClick={handleLogout} className="text-gray-400 hover:text-red-500 transition">Logout</button>
         </div>
       </nav>

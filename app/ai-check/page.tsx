@@ -37,7 +37,6 @@ export default function AICheckPage() {
     setLoading(false)
   }
 
-  // Adjusted colors for better readability in both modes
   const getColor = (score: number) => {
     if (score > 70) return 'text-red-600 dark:text-red-400'
     if (score > 40) return 'text-amber-600 dark:text-yellow-400'
@@ -53,18 +52,20 @@ export default function AICheckPage() {
   return (
     <div className="min-h-screen flex flex-col text-gray-900 bg-white dark:text-white dark:bg-gradient-to-br dark:from-[#15284c] dark:to-[#0a1128]">
       
-      {/* Navbar: Added border and text colors for light mode */}
+      {/* Navbar Adaptive */}
       <nav className="border-b border-gray-200 dark:border-white/10 px-6 py-4 flex justify-between items-center bg-white/80 dark:bg-black/10 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <h1 className="font-bold text-lg text-blue-600 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
             IB Study Tools
           </h1>
         </div>
-        <div className="flex gap-4 text-sm">
+        <div className="flex gap-4 text-sm font-medium">
           <a href="/home" className="text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-white transition">Home</a>
           <a href="/generate" className="text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-white transition">Generate</a>
           <a href="/ai-check" className="font-medium text-blue-600 dark:text-white border-b-2 border-blue-600 dark:border-white pb-1">AI Check</a>
           <a href="/humanize" className="text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-white transition">Humanize</a>
+          {/* NEW: Past Papers Link */}
+          <a href="/past-papers" className="text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-white transition">Past Papers</a>
           <button onClick={handleLogout} className="text-gray-400 hover:text-red-500 transition">Logout</button>
         </div>
       </nav>
@@ -86,7 +87,6 @@ export default function AICheckPage() {
           )}
 
           <div className="relative">
-            {/* Textarea: Fixed background and text color for light mode */}
             <textarea
               value={text}
               onChange={e => setText(e.target.value)}
@@ -112,7 +112,6 @@ export default function AICheckPage() {
 
           {results && (
             <div className="bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-white/10 rounded-2xl p-6 space-y-6 shadow-xl">
-              {/* Average score */}
               <div className="text-center bg-gray-50 dark:bg-black/20 rounded-xl p-6 border border-gray-100 dark:border-white/5">
                 <p className="text-sm text-gray-500 dark:text-gray-300 mb-2">Combined AI Probability</p>
                 <p className={`text-6xl font-black ${getColor(results.average)}`}>
@@ -123,7 +122,6 @@ export default function AICheckPage() {
                 </p>
               </div>
 
-              {/* Individual detectors */}
               <div className="border-t border-gray-100 dark:border-white/10 pt-6 space-y-8">
                 {results.detectors.map((d: any) => (
                   <div key={d.service}>
