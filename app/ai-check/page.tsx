@@ -50,7 +50,7 @@ export default function AICheckPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col text-white bg-gradient-to-br from-[#15284c] to-[#0a1128]">
+    <div className="min-h-screen flex flex-col text-gray-900 bg-gray-50 dark:text-white dark:bg-gradient-to-br dark:from-[#15284c] dark:to-[#0a1128]">
       
       <nav className="border-b border-white/10 px-6 py-4 flex justify-between items-center bg-black/10 backdrop-blur-sm">
         <div className="flex items-center gap-3">

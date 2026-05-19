@@ -71,7 +71,7 @@ export default function HumanizePage() {
 
   return (
     // NEW: Deep blue gradient background
-    <div className="min-h-screen text-white bg-gradient-to-br from-[#15284c] to-[#0a1128]">
+    <div className="min-h-screen flex flex-col text-gray-900 bg-gray-50 dark:text-white dark:bg-gradient-to-br dark:from-[#15284c] dark:to-[#0a1128]">
       {/* NEW: Transparent, glassmorphism navbar */}
       <nav className="border-b border-white/10 px-6 py-4 flex justify-between items-center bg-black/10 backdrop-blur-sm">
         <h1 className="font-bold text-lg text-white" style={{ fontFamily: 'Georgia, serif' }}>

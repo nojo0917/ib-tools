@@ -1,8 +1,33 @@
 @import "tailwindcss";
 
+/* LIGHT MODE (Default) */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  
+  /* Appearance Page Variables - Light Version */
+  --navy2: #f8fafc;
+  --border2: #e2e8f0;
+  --border: #cbd5e1;
+  --text2: #64748b;
+  --text: #0f172a;
+  --accent: #2563eb;
+  --accent2: #3b82f6;
+}
+
+/* DARK MODE (Triggered by the .dark class from next-themes) */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+
+  /* Appearance Page Variables - Dark Version */
+  --navy2: #1e293b;
+  --border2: #334155;
+  --border: #475569;
+  --text2: #94a3b8;
+  --text: #f8fafc;
+  --accent: #3b82f6;
+  --accent2: #60a5fa;
 }
 
 @theme inline {
@@ -12,37 +37,48 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
 
-  .prose table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85rem;
-    margin: 1rem 0;
-  }
-  .prose table th {
-    background-color: #f1f5f9;
-    padding: 8px 12px;
-    text-align: left;
-    border: 1px solid #e2e8f0;
-    font-weight: 600;
-  }
-  .prose table td {
-    padding: 8px 12px;
-    border: 1px solid #e2e8f0;
-    vertical-align: top;
-  }
-  .prose table tr:nth-child(even) {
-    background-color: #f8fafc;
-  }
+/* Standard Table Styling */
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin: 1rem 0;
+}
+
+.prose table th {
+  background-color: #f1f5f9;
+  padding: 8px 12px;
+  text-align: left;
+  border: 1px solid #e2e8f0;
+  font-weight: 600;
+}
+
+.dark .prose table th {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+.prose table td {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+
+.dark .prose table td {
+  border-color: #334155;
+}
+
+.prose table tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+.dark .prose table tr:nth-child(even) {
+  background-color: #0f172a;
 }
