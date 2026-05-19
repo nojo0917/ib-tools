@@ -12,12 +12,8 @@ const SUBJECTS = [
 ]
 
 interface Paper {
-  id: string; 
-  subject: string; 
-  title: string; 
-  year: number;
-  paper_type: string; 
-  file_url: string;
+  id: string; subject: string; title: string; year: number;
+  paper_type: string; file_url: string;
 }
 
 export default function PastPapersPage() {
@@ -40,17 +36,13 @@ export default function PastPapersPage() {
   ]
 
   useEffect(() => { loadPapers() }, [])
-  
   useEffect(() => {
     setFiltered(subject === 'All Subjects' ? papers : papers.filter(p => p.subject === subject))
   }, [subject, papers])
 
   const loadPapers = async () => {
     const { data } = await supabase.from('past_papers').select('*').order('year', { ascending: false })
-    if (data) { 
-      setPapers(data)
-      setFiltered(data) 
-    }
+    if (data) { setPapers(data); setFiltered(data); }
     setLoading(false)
   }
 
@@ -62,18 +54,20 @@ export default function PastPapersPage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300">
       
-      {/* --- PIXEL-PERFECT MATCHED NAVBAR --- */}
+      {/* --- MATCHED NAVBAR --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between relative">
           
           <div className="flex items-center">
-            {/* The w-14 spacer container matches the Toggle Button size from Generate
-                to ensure the Logo text is in the exact same spot on all pages.
+            {/* CRITICAL FIX: 
+               This container is exactly 56px wide (w-14). 
+               The button is absolute, so the 'IB Study Tools' text 
+               starts at the EXACT same pixel as your AI Check page.
             */}
-            <div className="w-14 flex items-center">
+            <div className="w-14 flex items-center relative">
                <button 
                   onClick={() => setSidebarOpen(!sidebarOpen)} 
-                  className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all shadow-sm shrink-0"
+                  className="absolute left-0 flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all shadow-sm"
                >
                  <span className={`text-lg font-bold transition-transform duration-300 ${sidebarOpen ? 'rotate-0' : 'rotate-180'}`}>
                    {sidebarOpen ? '←' : '→'}
@@ -81,13 +75,17 @@ export default function PastPapersPage() {
                </button>
             </div>
             
-            {/* Standardized Font & Color matched to AI Check */}
-            <Link href="/home" className="text-xl font-bold text-blue-600 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
+            {/* Standardized Font: Georgia + Color: Blue/White */}
+            <Link 
+              href="/home" 
+              className="text-xl font-bold text-blue-600 dark:text-white" 
+              style={{ fontFamily: 'Georgia, serif' }}
+            >
               IB Study Tools
             </Link>
           </div>
 
-          {/* Centered Pill Navigation matched to AI Check */}
+          {/* Centered Pill Navigation */}
           <div className="hidden md:flex items-center gap-1 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl p-1">
             {navLinks.map((link) => (
                 <Link 
@@ -104,10 +102,7 @@ export default function PastPapersPage() {
             ))}
           </div>
 
-          <button 
-            onClick={handleLogout} 
-            className="text-sm font-bold text-slate-400 hover:text-red-500 transition shrink-0"
-          >
+          <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-red-500 transition shrink-0">
             Logout
           </button>
         </div>
@@ -116,7 +111,7 @@ export default function PastPapersPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* --- SIDEBAR --- */}
         {sidebarOpen && (
-          <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0">
+          <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0 animate-in slide-in-from-left duration-200">
             <div className="p-6 space-y-6">
               <div>
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Subject Filter</h3>
@@ -132,7 +127,6 @@ export default function PastPapersPage() {
           </aside>
         )}
 
-        {/* --- MAIN CONTENT --- */}
         <main className="flex-1 overflow-y-auto bg-white dark:bg-[#0f172a] p-8 lg:p-12">
           <div className="max-w-4xl mx-auto space-y-10">
             <header className="space-y-2">
@@ -154,9 +148,7 @@ export default function PastPapersPage() {
                   <div key={paper.id} className="group flex flex-col bg-white dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm hover:shadow-xl hover:border-blue-500 dark:hover:border-blue-500 transition-all duration-300">
                     <div className="mb-6">
                       <p className="text-[10px] uppercase tracking-widest text-blue-600 dark:text-blue-400 font-black mb-3">{paper.subject}</p>
-                      <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight mb-4 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                        {paper.title}
-                      </h3>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight mb-4 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{paper.title}</h3>
                       <div className="flex gap-2">
                         <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2.5 py-1 rounded-lg">{paper.year}</span>
                         <span className="text-[10px] font-black bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-lg">{paper.paper_type}</span>
