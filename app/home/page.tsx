@@ -1,6 +1,7 @@
 'use client'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 export default function HomePage() {
   const router = useRouter()
@@ -33,12 +34,23 @@ export default function HomePage() {
         >
           IB Study Tools
         </h1>
-        <button
-          onClick={handleLogout}
-          className="text-sm text-blue-300 hover:text-white transition-colors"
-        >
-          Logout
-        </button>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/profile"
+            className="text-sm text-blue-300 hover:text-white transition-colors flex items-center gap-1"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            </svg>
+            Profile
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="text-sm text-blue-300 hover:text-white transition-colors"
+          >
+            Logout
+          </button>
+        </div>
       </nav>
 
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-12">
