@@ -19,13 +19,16 @@ export async function POST(req: Request) {
         model: "openai/gpt-oss-120b:free", 
         messages: messages,
         stream: true,
+        // TEMPERATURE CONTROL: 0.5 makes it more focused and logical
+        temperature: 0.5,
+        // MAX TOKENS: Prevents the AI from rambling on forever
+        max_tokens: 2000, 
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error("OpenRouter Error:", errorText);
-      // Return the actual error so you can see it in the browser console
       return new NextResponse(errorText, { status: response.status });
     }
 
@@ -35,7 +38,7 @@ export async function POST(req: Request) {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
-        'Content-Encoding': 'none', // Prevents some proxies from compressing the stream
+        'Content-Encoding': 'none', 
       },
     });
 

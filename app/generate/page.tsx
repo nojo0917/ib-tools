@@ -91,16 +91,21 @@ export default function GeneratePage() {
     const currentInput = input; 
     const userMessage: Message = { role: 'user', content: currentInput }
     
-    // Create a deep copy of current messages for the API call
-    let messagesForAPI = messages.map(m => ({ role: m.role, content: m.content }));
-    
-    if (messagesForAPI.length === 0) {
-        messagesForAPI.push({
-            role: 'system',
-            content: `You are an expert IB Tutor for ${subject}. Speak clearly and professionally.`
-        });
-    }
-    messagesForAPI.push(userMessage);
+    // LOGIC FIX: Create the system instructions every time to keep the AI on track
+    const systemPrompt: Message = {
+        role: 'system',
+        content: `You are an expert IB Tutor for ${subject}. 
+        The student is asking for help with a ${taskType}. 
+        Provide clear, academic, and structured guidance that follows IB criteria. 
+        Be professional and encouraging.`
+    };
+
+    // Construct the payload: System Message -> Old Messages -> New User Message
+    const messagesForAPI = [
+        systemPrompt,
+        ...messages.map(m => ({ role: m.role, content: m.content })),
+        userMessage
+    ];
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
@@ -127,7 +132,6 @@ export default function GeneratePage() {
         const { done, value } = await reader.read(); 
         if (done) break
         
-        // Use stream: true to handle fragments of multi-byte characters
         const chunk = decoder.decode(value, { stream: true })
         const lines = chunk.split('\n');
         
@@ -149,13 +153,11 @@ export default function GeneratePage() {
                 return updated;
               });
             }
-          } catch (e) {
-            // Ignore parse errors for incomplete JSON chunks
-          }
+          } catch (e) {}
         }
       }
 
-      // Finalizing: Save to database
+      // Finalizing: Save to database (filtering out system role for UI storage)
       const { data: { user } } = await supabase.auth.getUser()
       if (user && fullOutput) {
         const finalChatHistory = [...messages, userMessage, { role: 'assistant', content: fullOutput }].filter(m => m.role !== 'system');
@@ -185,7 +187,6 @@ export default function GeneratePage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors">
       
-      {/* --- ALIGNED NAVBAR --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
