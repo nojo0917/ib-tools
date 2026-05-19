@@ -36,7 +36,6 @@ export default function GeneratePage() {
   const [history, setHistory] = useState<Generation[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [started, setStarted] = useState(false)
-  const [menuOpen, setMenuOpen] = useState<string | null>(null)
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
 
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -77,7 +76,7 @@ export default function GeneratePage() {
     } catch {
       setMessages([{ role: 'user', content: gen.input }, { role: 'assistant', content: gen.output }])
     }
-    setStarted(true); setError(''); setMenuOpen(null)
+    setStarted(true); setError('')
   }
 
   const handleDelete = async (id: string) => {
@@ -89,7 +88,10 @@ export default function GeneratePage() {
 
   const handleSend = async () => {
     if (!input.trim()) return
-    if (!started && (!subject || !taskType)) { setError('Select subject and task type'); return }
+    // Ensure setup is done if it's a new chat
+    if (!currentChatId && (!subject || !taskType)) {
+      setError('Select subject and task type'); return
+    }
 
     const currentInput = input; const userMessage: Message = { role: 'user', content: currentInput }
     const newMessages = [...messages, userMessage]
@@ -138,10 +140,13 @@ export default function GeneratePage() {
     setLoading(false)
   }
 
+  // Determine if we show the setup screen or the chat
+  const showSetup = !started && messages.length === 0 && !currentChatId;
+
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300">
       
-      {/* --- ADAPTIVE NAVBAR --- */}
+      {/* --- MATCHED NAVBAR --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -194,7 +199,7 @@ export default function GeneratePage() {
 
         {/* --- MAIN CHAT AREA --- */}
         <main className="flex-1 flex flex-col relative bg-white dark:bg-[#0f172a]">
-          {!started && (
+          {showSetup && (
             <div className="absolute inset-0 flex items-center justify-center p-6 z-10 bg-white dark:bg-[#0f172a]">
               <div className="max-w-md w-full space-y-8 text-center">
                 <div className="space-y-2">
@@ -202,14 +207,15 @@ export default function GeneratePage() {
                   <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Configure your study session to begin.</p>
                 </div>
                 <div className="grid gap-4">
-                  <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold focus:border-blue-500 outline-none transition-all">
+                  <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold focus:border-blue-500 outline-none transition-all dark:text-white">
                     <option value="">Select Subject</option>
                     {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
-                  <select value={taskType} onChange={e => setTaskType(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold focus:border-blue-500 outline-none transition-all">
+                  <select value={taskType} onChange={e => setTaskType(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold focus:border-blue-500 outline-none transition-all dark:text-white">
                     <option value="">Select Task Type</option>
                     {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
+                  {error && <p className="text-red-500 text-xs font-bold uppercase">{error}</p>}
                 </div>
               </div>
             </div>
@@ -219,7 +225,7 @@ export default function GeneratePage() {
             <div className="max-w-4xl mx-auto space-y-8">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] rounded-3xl px-6 py-4 shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200'}`}>
+                  <div className={`max-w-[85%] rounded-3xl px-6 py-4 shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white shadow-blue-100 dark:shadow-none' : 'bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200'}`}>
                     {msg.role === 'assistant' ? (
                       <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed">
                         <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>{msg.content}</ReactMarkdown>
@@ -235,10 +241,24 @@ export default function GeneratePage() {
             </div>
           </div>
 
+          {/* INPUT FIELD - Always visible now so you can type */}
           <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-[#0f172a]/50 backdrop-blur-md">
             <div className="max-w-4xl mx-auto flex gap-4 items-end bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-2 focus-within:ring-4 focus-within:ring-blue-500/5 transition-all">
-              <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} placeholder="Message your tutor..." className="flex-1 bg-transparent border-none p-4 text-sm focus:outline-none resize-none dark:text-white" rows={1} />
-              <button onClick={handleSend} disabled={loading || !input.trim()} className="bg-slate-900 dark:bg-blue-600 text-white rounded-2xl px-6 py-3.5 text-sm font-bold hover:opacity-90 transition disabled:opacity-30">Send</button>
+              <textarea 
+                value={input} 
+                onChange={e => setInput(e.target.value)} 
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} 
+                placeholder="Message your tutor..." 
+                className="flex-1 bg-transparent border-none p-4 text-sm focus:outline-none resize-none dark:text-white" 
+                rows={1} 
+              />
+              <button 
+                onClick={handleSend} 
+                disabled={loading || !input.trim()} 
+                className="bg-slate-900 dark:bg-blue-600 text-white rounded-2xl px-6 py-3.5 text-sm font-bold hover:opacity-90 transition disabled:opacity-30"
+              >
+                Send
+              </button>
             </div>
           </div>
         </main>
