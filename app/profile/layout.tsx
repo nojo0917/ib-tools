@@ -86,6 +86,16 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
         </nav>
 
         <div className="sidebar-footer">
+          {/* NEW: Exit Profile Button */}
+          <Link 
+            href="/" 
+            className="nav-item" 
+            style={{ marginBottom: '12px' }}
+          >
+            <i className="ti ti-arrow-left" aria-hidden="true" />
+            Exit Profile
+          </Link>
+
           <button className="logout-btn" onClick={handleSignOut}>
             <i className="ti ti-logout" aria-hidden="true" />
             Sign out
