@@ -91,7 +91,6 @@ export default function GeneratePage() {
     const currentInput = input; 
     const userMessage: Message = { role: 'user', content: currentInput }
     
-    // LOGIC FIX: Create the system instructions every time to keep the AI on track
     const systemPrompt: Message = {
         role: 'system',
         content: `You are an expert IB Tutor for ${subject}. 
@@ -100,7 +99,6 @@ export default function GeneratePage() {
         Be professional and encouraging.`
     };
 
-    // Construct the payload: System Message -> Old Messages -> New User Message
     const messagesForAPI = [
         systemPrompt,
         ...messages.map(m => ({ role: m.role, content: m.content })),
@@ -128,13 +126,19 @@ export default function GeneratePage() {
       
       setMessages(prev => [...prev, { role: 'assistant', content: '' }])
 
+      // FIXED BUFFERING LOGIC
+      let leftover = ''; 
+
       while (reader) {
         const { done, value } = await reader.read(); 
         if (done) break
         
         const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split('\n');
+        const lines = (leftover + chunk).split('\n');
         
+        // Save the last potentially incomplete line for the next iteration
+        leftover = lines.pop() || '';
+
         for (const line of lines) {
           const trimmedLine = line.trim();
           if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue;
@@ -153,11 +157,13 @@ export default function GeneratePage() {
                 return updated;
               });
             }
-          } catch (e) {}
+          } catch (e) {
+             // In case of a parse error on a "supposedly" full line, put it back to leftover
+             leftover = line;
+          }
         }
       }
 
-      // Finalizing: Save to database (filtering out system role for UI storage)
       const { data: { user } } = await supabase.auth.getUser()
       if (user && fullOutput) {
         const finalChatHistory = [...messages, userMessage, { role: 'assistant', content: fullOutput }].filter(m => m.role !== 'system');
