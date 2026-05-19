@@ -109,7 +109,7 @@ export default function GeneratePage() {
     setError('');
 
     try {
-      const res = await fetch('/api/generate', {
+      const res = await fetch('/api/gen', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subject, taskType, prompt: currentInput, messages: messagesForAPI }),
