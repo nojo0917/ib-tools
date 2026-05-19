@@ -237,37 +237,40 @@ export default function GeneratePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <nav className="bg-white border-b px-6 py-4 flex justify-between items-center">
+    // NEW: Applied deep blue gradient background and white text globally
+    <div className="min-h-screen flex flex-col text-white bg-gradient-to-br from-[#15284c] to-[#0a1128]">
+      {/* NEW: Navbar is now transparent with white borders/text */}
+      <nav className="border-b border-white/10 px-6 py-4 flex justify-between items-center bg-black/10 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-gray-500 hover:text-gray-900 text-xl"
+            className="text-gray-300 hover:text-white text-xl"
           >
             ☰
           </button>
-          <h1 className="font-bold text-lg text-blue-600" style={{ fontFamily: 'Georgia, serif' }}>
+          <h1 className="font-bold text-lg text-white" style={{ fontFamily: 'Georgia, serif' }}>
             IB Study Tools
           </h1>
         </div>
         <div className="flex gap-4 text-sm">
-        <a href="/home" className="text-gray-900 hover:text-blue-600">Home</a>
-          <a href="/generate" className="font-medium text-blue-600">Generate</a>
-          <a href="/ai-check" className="text-gray-900 hover:text-blue-600">AI Check</a>
-          <a href="/humanize" className="text-gray-900 hover:text-blue-600">Humanize</a>
-          <button onClick={handleLogout} className="text-gray-400 hover:text-gray-600">Logout</button>
+          <a href="/home" className="text-gray-300 hover:text-white transition">Home</a>
+          <a href="/generate" className="font-medium text-white">Generate</a>
+          <a href="/ai-check" className="text-gray-300 hover:text-white transition">AI Check</a>
+          <a href="/humanize" className="text-gray-300 hover:text-white transition">Humanize</a>
+          <button onClick={handleLogout} className="text-gray-400 hover:text-gray-200 transition">Logout</button>
         </div>
       </nav>
 
       <div className="flex flex-1 overflow-hidden" style={{ height: 'calc(100vh - 65px)' }}>
 
         {/* Sidebar */}
+        {/* NEW: Sidebar uses glassmorphism (translucent dark bg) instead of solid white */}
         {sidebarOpen && (
-          <div className="w-64 bg-white border-r flex flex-col shrink-0">
-            <div className="p-3 border-b">
+          <div className="w-64 border-r border-white/10 flex flex-col shrink-0 bg-black/20">
+            <div className="p-3 border-b border-white/10">
               <button
                 onClick={handleNew}
-                className="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700"
+                className="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 transition"
               >
                 + New Chat
               </button>
@@ -278,7 +281,7 @@ export default function GeneratePage() {
                 <p className="text-xs text-gray-400 p-4">No history yet</p>
               )}
               {history.map(gen => (
-                <div key={gen.id} className="relative border-b group">
+                <div key={gen.id} className="relative border-b border-white/5 group">
 
                   {renamingId === gen.id ? (
                     <div className="p-2">
@@ -290,7 +293,7 @@ export default function GeneratePage() {
                           if (e.key === 'Enter') handleRename(gen.id, gen.metadata)
                           if (e.key === 'Escape') setRenamingId(null)
                         }}
-                        className="w-full border rounded p-1 text-xs text-gray-900"
+                        className="w-full border border-white/20 bg-white/10 rounded p-1 text-xs text-white placeholder-gray-400"
                       />
                       <div className="flex gap-1 mt-1">
                         <button
@@ -301,7 +304,7 @@ export default function GeneratePage() {
                         </button>
                         <button
                           onClick={() => setRenamingId(null)}
-                          className="text-xs text-gray-500 px-2 py-0.5 rounded border"
+                          className="text-xs text-gray-300 px-2 py-0.5 rounded border border-white/20 hover:bg-white/5"
                         >
                           Cancel
                         </button>
@@ -309,61 +312,60 @@ export default function GeneratePage() {
                     </div>
                   ) : (
                     <>
+                      {/* NEW: Adjusted hover states for dark mode */}
                       <button
                         onClick={() => loadGeneration(gen)}
-                        className="w-full text-left p-3 hover:bg-gray-50 text-xs pr-8"
+                        className="w-full text-left p-3 hover:bg-white/5 text-xs pr-8 transition"
                       >
                         <div className="flex items-center gap-1 mb-0.5">
                           {gen.metadata?.pinned && (
-                            <span className="text-blue-500 text-xs">📌</span>
+                            <span className="text-blue-400 text-xs">📌</span>
                           )}
-                          <p className="font-medium text-gray-900 truncate">
+                          <p className="font-medium text-gray-200 truncate">
                             {gen.metadata?.label || `${gen.subject} — ${gen.task_type}`}
                           </p>
                         </div>
-                        <p className="text-gray-500 truncate">{gen.input}</p>
-                        <p className="text-gray-400 mt-0.5">
+                        <p className="text-gray-400 truncate">{gen.input}</p>
+                        <p className="text-gray-500 mt-0.5">
                           {new Date(gen.created_at).toLocaleDateString()}
                         </p>
                       </button>
 
-                      {/* Three dot button */}
                       <button
                         onMouseDown={e => {
                           e.stopPropagation()
                           e.preventDefault()
                           setMenuOpen(menuOpen === gen.id ? null : gen.id)
                         }}
-                        className="absolute right-1 top-2.5 w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute right-1 top-2.5 w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition"
                       >
                         ···
                       </button>
 
-                      {/* Dropdown menu */}
                       {menuOpen === gen.id && (
                         <div
                           ref={menuRef}
-                          className="absolute right-0 top-9 z-50 bg-white border rounded-xl shadow-lg w-40 overflow-hidden"
+                          className="absolute right-0 top-9 z-50 bg-[#1e293b] border border-white/10 rounded-xl shadow-xl w-40 overflow-hidden"
                           onMouseDown={e => e.stopPropagation()}
                         >
                           <button
                             onClick={() => handlePin(gen)}
-                            className="w-full text-left px-3 py-2.5 hover:bg-gray-50 text-gray-700 text-xs flex items-center gap-2"
+                            className="w-full text-left px-3 py-2.5 hover:bg-white/5 text-gray-200 text-xs flex items-center gap-2"
                           >
                             <span>📌</span>
                             <span>{gen.metadata?.pinned ? 'Unpin' : 'Pin'}</span>
                           </button>
                           <button
                             onClick={() => startRename(gen)}
-                            className="w-full text-left px-3 py-2.5 hover:bg-gray-50 text-gray-700 text-xs flex items-center gap-2"
+                            className="w-full text-left px-3 py-2.5 hover:bg-white/5 text-gray-200 text-xs flex items-center gap-2"
                           >
                             <span>✏️</span>
                             <span>Rename</span>
                           </button>
-                          <div className="border-t my-1" />
+                          <div className="border-t border-white/10 my-1" />
                           <button
                             onClick={() => handleDelete(gen.id)}
-                            className="w-full text-left px-3 py-2.5 hover:bg-red-50 text-red-600 text-xs flex items-center gap-2"
+                            className="w-full text-left px-3 py-2.5 hover:bg-red-500/10 text-red-400 text-xs flex items-center gap-2"
                           >
                             <span>🗑️</span>
                             <span>Delete</span>
@@ -381,47 +383,49 @@ export default function GeneratePage() {
         {/* Chat area */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {!started && (
-            <div className="p-6 border-b bg-white">
-              <p className="text-sm text-gray-700 mb-3">Select your subject and task type to get started:</p>
+            <div className="p-6 border-b border-white/10 bg-black/10">
+              <p className="text-sm text-gray-300 mb-3">Select your subject and task type to get started:</p>
               <div className="flex gap-3">
+                {/* NEW: Styled dropdowns for dark theme */}
                 <select value={subject} onChange={e => setSubject(e.target.value)}
-                  className="flex-1 border rounded-lg p-2 text-sm bg-white text-gray-900">
+                  className="flex-1 border border-white/20 rounded-lg p-2 text-sm bg-[#0f172a] text-white focus:outline-none focus:border-blue-500">
                   <option value="">Select subject...</option>
                   {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
                 <select value={taskType} onChange={e => setTaskType(e.target.value)}
-                  className="flex-1 border rounded-lg p-2 text-sm bg-white text-gray-900">
+                  className="flex-1 border border-white/20 rounded-lg p-2 text-sm bg-[#0f172a] text-white focus:outline-none focus:border-blue-500">
                   <option value="">Select task type...</option>
                   {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              {error && <p className="text-red-600 text-xs mt-2">{error}</p>}
+              {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
             </div>
           )}
 
           {started && (
-            <div className="px-4 py-2 bg-white border-b flex items-center gap-2 text-xs text-gray-500">
-              <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{subject}</span>
-              <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded">{taskType}</span>
+            <div className="px-4 py-2 border-b border-white/10 bg-black/10 flex items-center gap-2 text-xs text-gray-300">
+              <span className="bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30">{subject}</span>
+              <span className="bg-white/10 text-gray-300 px-2 py-0.5 rounded border border-white/10">{taskType}</span>
             </div>
           )}
 
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {messages.length === 0 && (
               <div className="text-center text-gray-400 mt-20">
-                <p className="text-lg mb-2">👋 Hi! I'm your IB tutor.</p>
+                <p className="text-lg mb-2 text-white">👋 Hi! I'm your IB tutor.</p>
                 <p className="text-sm">Select a subject and task type, then ask me anything.</p>
               </div>
             )}
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {/* NEW: Chat bubbles adapted for dark mode */}
                 <div className={`max-w-2xl rounded-2xl px-5 py-4 ${
                   msg.role === 'user'
                     ? 'bg-blue-600 text-white text-sm'
-                    : 'bg-white border text-gray-900 text-sm leading-relaxed shadow-sm'
+                    : 'bg-[#1e293b] border border-white/10 text-gray-100 text-sm leading-relaxed shadow-sm'
                 }`}>
                   {msg.role === 'assistant' ? (
-                    <div className="prose prose-sm max-w-none text-gray-900 prose-headings:text-gray-900 prose-headings:font-semibold prose-p:leading-relaxed prose-li:leading-relaxed prose-table:text-sm">
+                    <div className="prose prose-sm max-w-none text-gray-200 prose-headings:text-white prose-headings:font-semibold prose-p:leading-relaxed prose-li:leading-relaxed prose-table:text-sm prose-strong:text-white">
                       <ReactMarkdown
                         remarkPlugins={[remarkMath, remarkGfm]}
                         rehypePlugins={[rehypeKatex]}
@@ -437,7 +441,7 @@ export default function GeneratePage() {
             ))}
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-white border rounded-2xl px-4 py-3 text-sm text-gray-400 shadow-sm">
+                <div className="bg-[#1e293b] border border-white/10 rounded-2xl px-4 py-3 text-sm text-gray-400 shadow-sm animate-pulse">
                   Thinking...
                 </div>
               </div>
@@ -445,20 +449,21 @@ export default function GeneratePage() {
             <div ref={bottomRef} />
           </div>
 
-          <div className="p-4 bg-white border-t">
+          {/* NEW: Input area styled for dark theme */}
+          <div className="p-4 border-t border-white/10 bg-black/10 backdrop-blur-md">
             <div className="flex gap-3 items-end">
               <textarea
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask your IB tutor anything... (Enter to send, Shift+Enter for new line)"
-                className="flex-1 border rounded-xl p-3 text-sm text-gray-900 placeholder-gray-400 resize-none"
+                className="flex-1 border border-white/20 rounded-xl p-3 text-sm bg-white/5 text-white placeholder-gray-400 resize-none focus:outline-none focus:border-blue-500 transition"
                 rows={2}
               />
               <button
                 onClick={handleSend}
                 disabled={loading || !input.trim()}
-                className="bg-blue-600 text-white rounded-xl px-4 py-3 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 shrink-0"
+                className="bg-blue-600 text-white rounded-xl px-4 py-3 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 shrink-0 transition"
               >
                 Send
               </button>
