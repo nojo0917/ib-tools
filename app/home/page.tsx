@@ -66,7 +66,6 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 gap-8 w-full max-w-5xl sm:grid-cols-3">
           
-          {/* Tool Card Component Style */}
           {[
             { 
               title: 'Generate', 
@@ -93,7 +92,10 @@ export default function HomePage() {
             <button
               key={card.title}
               onClick={() => router.push(card.link)}
-              className="group relative bg-white dark:bg-white/[0.03] border-2 border-gray-100 dark:border-white/10 rounded-[2rem] p-8 text-left shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_20px_50px_rgba(37,99,235,0.1)] dark:hover:bg-white/[0.07] dark:hover:border-white/20 transition-all duration-500 hover:-translate-y-2 overflow-hidden"
+              /* FIX: Increased border from gray-100 to gray-300 for visibility.
+                 Added a darker md shadow for a more defined card depth.
+              */
+              className="group relative bg-white dark:bg-white/[0.03] border-2 border-gray-300 dark:border-white/10 rounded-[2rem] p-8 text-left shadow-md dark:shadow-none hover:shadow-2xl dark:hover:bg-white/[0.07] dark:hover:border-white/20 transition-all duration-500 hover:-translate-y-2 overflow-hidden"
             >
               {/* Card Hover Glow */}
               <div className="absolute -right-10 -top-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-500" />
@@ -102,7 +104,7 @@ export default function HomePage() {
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                 {card.title}
               </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-8">
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-8">
                 {card.desc}
               </p>
               <div className="text-xs text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest flex items-center gap-2 group-hover:gap-4 transition-all">
@@ -113,7 +115,7 @@ export default function HomePage() {
         </div>
 
         <div className="mt-20 flex flex-col items-center gap-4">
-          <div className="h-px w-20 bg-gray-200 dark:bg-white/10" />
+          <div className="h-px w-20 bg-gray-300 dark:bg-white/10" />
           <p className="text-[10px] text-gray-400 dark:text-blue-300/40 uppercase tracking-[0.4em] font-bold text-center">
             Empowering IB Students Worldwide
           </p>
