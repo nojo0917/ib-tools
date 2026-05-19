@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
+import 'katex/dist/katex.min.css' // Ensure KaTeX styles are imported for proper rendering
 
 const SUBJECTS = [
   'Mathematics AA', 'Mathematics AI', 'Chemistry', 'Biology', 'Physics',
@@ -20,7 +21,6 @@ const TASK_TYPES = [
   'Revision Summary', 'Explanation', 'Practice Questions', 'Normal Chatting',
 ]
 
-// Added 'system' to role to handle instructions properly
 interface Message { role: 'user' | 'assistant' | 'system'; content: string }
 interface Generation {
   id: string; subject: string; task_type: string; input: string;
@@ -96,12 +96,15 @@ export default function GeneratePage() {
     const currentInput = input; 
     const userMessage: Message = { role: 'user', content: currentInput }
     
-    // Logic to prevent gibberish: Inject a hidden system prompt for context if this is the start
     let messagesForAPI = [...messages];
     if (messagesForAPI.length === 0) {
         messagesForAPI.push({
             role: 'system',
-            content: `You are an expert IB Tutor. The current session is for ${subject} - ${taskType}. Use professional, clear academic English. Avoid hallucinating news or random strings.`
+            content: `You are an expert IB Tutor for ${subject}. 
+            CRITICAL MATH RULE: Always use LaTeX for math. 
+            - For inline math, use single dollar signs like $E=mc^2$. 
+            - For standalone equations/fractions, use double dollar signs like $$\\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$. 
+            Never use raw slashes like x/2 for fractions. Ensure text is clean and professional.`
         });
     }
     messagesForAPI.push(userMessage);
@@ -111,71 +114,72 @@ export default function GeneratePage() {
     setLoading(true);
     setStarted(true);
 
-    const res = await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        subject, 
-        taskType, 
-        prompt: currentInput, 
-        messages: messagesForAPI // Send the history including system prompt
-      }),
-    })
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, taskType, prompt: currentInput, messages: messagesForAPI }),
+      })
 
-    if (!res.ok) { setError('Stream error'); setLoading(false); return }
+      if (!res.ok) throw new Error('Stream error');
 
-    const reader = res.body?.getReader(); const decoder = new TextDecoder(); let fullOutput = ''
-    setMessages(prev => [...prev, { role: 'assistant', content: '' }])
+      const reader = res.body?.getReader(); const decoder = new TextDecoder(); let fullOutput = ''
+      setMessages(prev => [...prev, { role: 'assistant', content: '' }])
 
-    while (reader) {
-      const { done, value } = await reader.read(); if (done) break
-      const chunk = decoder.decode(value).split('\n').filter(l => l.startsWith('data: '))
-      for (const line of chunk) {
-        const data = line.replace('data: ', '')
-        if (data === '[DONE]') break
-        try {
-          const text = JSON.parse(data).choices?.[0]?.delta?.content || ''
-          fullOutput += text
-          setMessages(prev => {
-            const updated = [...prev]
-            updated[updated.length - 1] = { role: 'assistant', content: fullOutput }
-            return updated
-          })
-        } catch {}
+      while (reader) {
+        const { done, value } = await reader.read(); if (done) break
+        const chunk = decoder.decode(value).split('\n').filter(l => l.startsWith('data: '))
+        for (const line of chunk) {
+          const data = line.replace('data: ', '')
+          if (data === '[DONE]') break
+          try {
+            const text = JSON.parse(data).choices?.[0]?.delta?.content || ''
+            fullOutput += text
+            setMessages(prev => {
+              const updated = [...prev]
+              updated[updated.length - 1] = { role: 'assistant', content: fullOutput }
+              return updated
+            })
+          } catch {}
+        }
       }
-    }
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user && fullOutput) {
-      // Filter out system messages before saving to DB to keep history clean
-      const saveHistory = [...messages, userMessage, { role: 'assistant', content: fullOutput }].filter(m => m.role !== 'system');
-      if (currentChatId) {
-        await supabase.from('generations').update({ output: JSON.stringify(saveHistory) }).eq('id', currentChatId)
-      } else {
-        const { data } = await supabase.from('generations').insert({ user_id: user.id, tool: 'generate', subject, task_type: taskType, input: currentInput, output: JSON.stringify(saveHistory) }).select().single()
-        if (data) setCurrentChatId(data.id)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user && fullOutput) {
+        const saveHistory = [...messages, userMessage, { role: 'assistant', content: fullOutput }].filter(m => m.role !== 'system');
+        if (currentChatId) {
+          await supabase.from('generations').update({ output: JSON.stringify(saveHistory) }).eq('id', currentChatId)
+        } else {
+          const { data } = await supabase.from('generations').insert({ user_id: user.id, tool: 'generate', subject, task_type: taskType, input: currentInput, output: JSON.stringify(saveHistory) }).select().single()
+          if (data) setCurrentChatId(data.id)
+        }
+        loadHistory()
       }
-      loadHistory()
+    } catch (err) {
+      setError('Tutor connection lost.');
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300">
       
-      {/* --- NAVBAR --- */}
+      {/* --- RECTIFIED NAVBAR --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button 
-                onClick={() => setSidebarOpen(!sidebarOpen)} 
-                className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all shadow-sm group"
-                title={sidebarOpen ? "Close Sidebar" : "Open Sidebar"}
-            >
-              <span className={`text-lg font-bold transition-transform duration-300 ${sidebarOpen ? 'rotate-0' : 'rotate-180'}`}>
-                {sidebarOpen ? '←' : '→'}
-              </span>
-            </button>
+          <div className="flex items-center">
+            {/* Sidebar Toggle or Placeholder Spacer to maintain Alignment */}
+            <div className="w-14 flex items-center"> 
+                <button 
+                    onClick={() => setSidebarOpen(!sidebarOpen)} 
+                    className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all shadow-sm group"
+                >
+                  <span className={`text-lg font-bold transition-transform duration-300 ${sidebarOpen ? 'rotate-0' : 'rotate-180'}`}>
+                    {sidebarOpen ? '←' : '→'}
+                  </span>
+                </button>
+            </div>
             <Link href="/home" className="text-xl font-bold text-blue-600 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
               IB Study Tools
             </Link>
@@ -220,7 +224,6 @@ export default function GeneratePage() {
           </aside>
         )}
 
-        {/* --- MAIN CHAT AREA --- */}
         <main className="flex-1 flex flex-col relative bg-white dark:bg-[#0f172a]">
           {!started && (
             <div className="absolute inset-0 flex items-center justify-center p-6 z-40 bg-white dark:bg-[#0f172a]">
@@ -258,7 +261,12 @@ export default function GeneratePage() {
                   <div className={`max-w-[85%] rounded-3xl px-6 py-4 shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200'}`}>
                     {msg.role === 'assistant' ? (
                       <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed">
-                        <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>{msg.content}</ReactMarkdown>
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkMath, remarkGfm]} 
+                          rehypePlugins={[rehypeKatex]}
+                        >
+                          {msg.content}
+                        </ReactMarkdown>
                       </div>
                     ) : (
                       <p className="text-sm font-medium leading-relaxed">{msg.content}</p>
