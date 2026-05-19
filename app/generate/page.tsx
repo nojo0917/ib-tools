@@ -4,9 +4,6 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 
-// Note: Removed ReactMarkdown and Katex imports to prevent the silent crash 
-// caused by the resetting package.json dependencies.
-
 const SUBJECTS = [
   'Mathematics AA', 'Mathematics AI', 'Chemistry', 'Biology', 'Physics',
   'English Language & Literature', 'English Literature', 'History', 'Economics', 
@@ -86,7 +83,7 @@ export default function GeneratePage() {
   }
 
   const handleSend = async () => {
-    if (!input.trim()) return
+    if (!input.trim() || loading) return
     if (!started && (!subject || !taskType)) {
       setError('Select subject and task type'); return
     }
@@ -94,11 +91,13 @@ export default function GeneratePage() {
     const currentInput = input; 
     const userMessage: Message = { role: 'user', content: currentInput }
     
-    let messagesForAPI = [...messages];
+    // Create a deep copy of current messages for the API call
+    let messagesForAPI = messages.map(m => ({ role: m.role, content: m.content }));
+    
     if (messagesForAPI.length === 0) {
         messagesForAPI.push({
             role: 'system',
-            content: `You are an expert IB Tutor for ${subject}. Speak clearly and professionally. Do not use random characters.`
+            content: `You are an expert IB Tutor for ${subject}. Speak clearly and professionally.`
         });
     }
     messagesForAPI.push(userMessage);
@@ -107,6 +106,7 @@ export default function GeneratePage() {
     setInput('');
     setLoading(true);
     setStarted(true);
+    setError('');
 
     try {
       const res = await fetch('/api/generate', {
@@ -117,57 +117,75 @@ export default function GeneratePage() {
 
       if (!res.ok) throw new Error('Stream error');
 
-      const reader = res.body?.getReader(); const decoder = new TextDecoder(); let fullOutput = ''
+      const reader = res.body?.getReader(); 
+      const decoder = new TextDecoder(); 
+      let fullOutput = ''
+      
       setMessages(prev => [...prev, { role: 'assistant', content: '' }])
 
       while (reader) {
-        const { done, value } = await reader.read(); if (done) break
-        const chunk = decoder.decode(value).split('\n').filter(l => l.startsWith('data: '))
-        for (const line of chunk) {
+        const { done, value } = await reader.read(); 
+        if (done) break
+        
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n').filter(l => l.startsWith('data: '))
+        
+        for (const line of lines) {
           const data = line.replace('data: ', '')
           if (data === '[DONE]') break
           try {
-            const text = JSON.parse(data).choices?.[0]?.delta?.content || ''
+            const parsed = JSON.parse(data)
+            const text = parsed.choices?.[0]?.delta?.content || ''
             fullOutput += text
             setMessages(prev => {
               const updated = [...prev]
               updated[updated.length - 1] = { role: 'assistant', content: fullOutput }
               return updated
             })
-          } catch {}
+          } catch (e) {}
         }
       }
 
+      // Finalizing: Save to database
       const { data: { user } } = await supabase.auth.getUser()
       if (user && fullOutput) {
-        const saveHistory = [...messages, userMessage, { role: 'assistant', content: fullOutput }].filter(m => m.role !== 'system');
+        // We reconstruct history using the fullOutput gathered during the stream
+        const finalChatHistory = [...messages, userMessage, { role: 'assistant', content: fullOutput }].filter(m => m.role !== 'system');
+        
         if (currentChatId) {
-          await supabase.from('generations').update({ output: JSON.stringify(saveHistory) }).eq('id', currentChatId)
+          await supabase.from('generations').update({ output: JSON.stringify(finalChatHistory) }).eq('id', currentChatId)
         } else {
-          const { data } = await supabase.from('generations').insert({ user_id: user.id, tool: 'generate', subject, task_type: taskType, input: currentInput, output: JSON.stringify(saveHistory) }).select().single()
+          const { data } = await supabase.from('generations').insert({ 
+            user_id: user.id, 
+            tool: 'generate', 
+            subject, 
+            task_type: taskType, 
+            input: currentInput, 
+            output: JSON.stringify(finalChatHistory) 
+          }).select().single()
           if (data) setCurrentChatId(data.id)
         }
         loadHistory()
       }
     } catch (err) {
-      setError('Connection lost.');
+      setError('Connection lost. Please try again.');
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100">
+    <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors">
       
       {/* --- ALIGNED NAVBAR --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
-            {/* FIXED WIDTH SPACER TO MATCH HUMANIZER/AI CHECK PAGES */}
-            <div className="w-12 flex items-center"> 
+            {/* MATCHING W-14 SPACER FOR PERFECT LOGO ALIGNMENT */}
+            <div className="w-14 flex items-center"> 
                 <button 
                     onClick={() => setSidebarOpen(!sidebarOpen)} 
-                    className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all shadow-sm group"
+                    className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all shadow-sm"
                 >
                   <span className={`text-lg font-bold transition-transform duration-300 ${sidebarOpen ? 'rotate-0' : 'rotate-180'}`}>
                     {sidebarOpen ? '←' : '→'}
@@ -202,7 +220,7 @@ export default function GeneratePage() {
                 <button key={gen.id} onClick={() => loadGeneration(gen)} className={`w-full text-left p-3 rounded-xl transition-all group relative ${currentChatId === gen.id ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
                   <p className="text-xs font-bold truncate pr-4">{gen.subject} — {gen.task_type}</p>
                   <p className="text-[10px] text-slate-400 truncate mt-1">{gen.input}</p>
-                  <span onClick={(e) => { e.stopPropagation(); handleDelete(gen.id) }} className="absolute right-2 top-3 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 text-xs">✕</span>
+                  <span onClick={(e) => { e.stopPropagation(); handleDelete(gen.id) }} className="absolute right-2 top-3 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 text-xs transition">✕</span>
                 </button>
               ))}
             </div>
@@ -212,7 +230,7 @@ export default function GeneratePage() {
         <main className="flex-1 flex flex-col relative bg-white dark:bg-[#0f172a]">
           {!started && (
             <div className="absolute inset-0 flex items-center justify-center p-6 z-40 bg-white dark:bg-[#0f172a]">
-              <div className="max-w-md w-full space-y-8 text-center">
+              <div className="max-w-md w-full space-y-8 text-center animate-in fade-in zoom-in duration-300">
                 <div className="space-y-2">
                   <h2 className="text-4xl font-black tracking-tight dark:text-white">Tutor Mode</h2>
                   <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Configure your study session.</p>
@@ -227,7 +245,7 @@ export default function GeneratePage() {
                     {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                   <button onClick={() => { if(subject && taskType) setStarted(true); else setError('Select both fields') }} className="w-full bg-blue-600 text-white rounded-2xl py-4 font-bold shadow-xl active:scale-95">Start Session</button>
-                  {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
+                  {error && <p className="text-red-500 text-xs font-bold uppercase tracking-widest">{error}</p>}
                 </div>
               </div>
             </div>
@@ -242,13 +260,13 @@ export default function GeneratePage() {
                   </div>
                 </div>
               ))}
-              {loading && <div className="text-xs font-bold text-blue-500 animate-pulse px-4 py-2">Tutor is drafting...</div>}
+              {loading && <div className="text-xs font-bold text-blue-500 animate-pulse px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-full w-fit">Tutor is drafting...</div>}
               <div ref={bottomRef} />
             </div>
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 p-6 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-xl border-t border-slate-100 dark:border-slate-800">
-            <div className="max-w-4xl mx-auto flex gap-4 items-end bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-2">
+          <div className="absolute bottom-0 left-0 right-0 p-6 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-xl border-t border-slate-100 dark:border-slate-800 z-30">
+            <div className="max-w-4xl mx-auto flex gap-4 items-end bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-2 focus-within:ring-2 focus-within:ring-blue-500/50 transition-all">
               <textarea 
                 value={input} 
                 onChange={e => setInput(e.target.value)} 
@@ -257,7 +275,7 @@ export default function GeneratePage() {
                 className="flex-1 bg-transparent border-none p-4 text-sm focus:outline-none resize-none dark:text-white" 
                 rows={1} 
               />
-              <button onClick={handleSend} disabled={loading || !input.trim()} className="bg-slate-900 dark:bg-blue-600 text-white rounded-2xl px-6 py-3.5 text-sm font-bold disabled:opacity-30">Send</button>
+              <button onClick={handleSend} disabled={loading || !input.trim()} className="bg-slate-900 dark:bg-blue-600 text-white rounded-2xl px-6 py-3.5 text-sm font-bold disabled:opacity-30 active:scale-95 transition-all">Send</button>
             </div>
           </div>
         </main>
