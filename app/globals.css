@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* This line tells Tailwind v4 to use your config file for dark mode logic */
+@config "../../tailwind.config.ts";
+
 /* LIGHT MODE (Default) */
 :root {
   --background: #ffffff;
@@ -59,6 +62,7 @@ body {
   font-weight: 600;
 }
 
+/* Explicitly styling table headers for dark mode */
 .dark .prose table th {
   background-color: #1e293b;
   border-color: #334155;
