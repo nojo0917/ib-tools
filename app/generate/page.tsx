@@ -88,7 +88,6 @@ export default function GeneratePage() {
 
   const handleSend = async () => {
     if (!input.trim()) return
-    // Ensure setup is done if it's a new chat
     if (!currentChatId && (!subject || !taskType)) {
       setError('Select subject and task type'); return
     }
@@ -140,18 +139,22 @@ export default function GeneratePage() {
     setLoading(false)
   }
 
-  // Determine if we show the setup screen or the chat
-  const showSetup = !started && messages.length === 0 && !currentChatId;
-
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300">
       
-      {/* --- MATCHED NAVBAR --- */}
+      {/* --- NAVBAR --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition text-slate-500">
-              {sidebarOpen ? '⇠' : '⇢'}
+            {/* MORE OBVIOUS SIDEBAR TOGGLE */}
+            <button 
+                onClick={() => setSidebarOpen(!sidebarOpen)} 
+                className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all shadow-sm group"
+                title={sidebarOpen ? "Close Sidebar" : "Open Sidebar"}
+            >
+              <span className={`text-lg font-bold transition-transform duration-300 ${sidebarOpen ? 'rotate-0' : 'rotate-180'}`}>
+                {sidebarOpen ? '←' : '→'}
+              </span>
             </button>
             <Link href="/home" className="text-xl font-bold text-blue-600 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
               IB Study Tools
@@ -177,7 +180,7 @@ export default function GeneratePage() {
         
         {/* --- SIDEBAR --- */}
         {sidebarOpen && (
-          <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0">
+          <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0 transition-all">
             <div className="p-4">
               <button onClick={handleNew} className="w-full bg-slate-900 dark:bg-blue-600 text-white rounded-xl py-3 text-sm font-bold hover:opacity-90 transition shadow-lg dark:shadow-none">
                 + New Session
@@ -199,33 +202,41 @@ export default function GeneratePage() {
 
         {/* --- MAIN CHAT AREA --- */}
         <main className="flex-1 flex flex-col relative bg-white dark:bg-[#0f172a]">
-          {showSetup && (
-            <div className="absolute inset-0 flex items-center justify-center p-6 z-10 bg-white dark:bg-[#0f172a]">
-              <div className="max-w-md w-full space-y-8 text-center">
+          {/* SETUP SCREEN FIX: Only show if not started */}
+          {!started && (
+            <div className="absolute inset-0 flex items-center justify-center p-6 z-40 bg-white dark:bg-[#0f172a]">
+              <div className="max-w-md w-full space-y-8 text-center animate-in fade-in zoom-in duration-300">
                 <div className="space-y-2">
                   <h2 className="text-4xl font-black tracking-tight dark:text-white">Tutor Mode</h2>
                   <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Configure your study session to begin.</p>
                 </div>
                 <div className="grid gap-4">
-                  <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold focus:border-blue-500 outline-none transition-all dark:text-white">
+                  <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold focus:border-blue-500 outline-none transition-all dark:text-white cursor-pointer">
                     <option value="">Select Subject</option>
                     {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
-                  <select value={taskType} onChange={e => setTaskType(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold focus:border-blue-500 outline-none transition-all dark:text-white">
+                  <select value={taskType} onChange={e => setTaskType(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold focus:border-blue-500 outline-none transition-all dark:text-white cursor-pointer">
                     <option value="">Select Task Type</option>
                     {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
-                  {error && <p className="text-red-500 text-xs font-bold uppercase">{error}</p>}
+                  
+                  <button 
+                    onClick={() => { if(subject && taskType) setStarted(true); else setError('Select both fields') }}
+                    className="w-full bg-blue-600 text-white rounded-2xl py-4 font-bold hover:bg-blue-700 transition shadow-xl shadow-blue-500/10 active:scale-95"
+                  >
+                    Start Session
+                  </button>
+                  {error && <p className="text-red-500 text-xs font-bold uppercase tracking-widest animate-bounce">{error}</p>}
                 </div>
               </div>
             </div>
           )}
 
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
-            <div className="max-w-4xl mx-auto space-y-8">
+            <div className="max-w-4xl mx-auto space-y-8 pb-32">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] rounded-3xl px-6 py-4 shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white shadow-blue-100 dark:shadow-none' : 'bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200'}`}>
+                  <div className={`max-w-[85%] rounded-3xl px-6 py-4 shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200'}`}>
                     {msg.role === 'assistant' ? (
                       <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed">
                         <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>{msg.content}</ReactMarkdown>
@@ -236,13 +247,13 @@ export default function GeneratePage() {
                   </div>
                 </div>
               ))}
-              {loading && <div className="text-xs font-bold text-blue-500 animate-pulse">Tutor is drafting...</div>}
+              {loading && <div className="text-xs font-bold text-blue-500 animate-pulse bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-full w-fit">Tutor is drafting...</div>}
               <div ref={bottomRef} />
             </div>
           </div>
 
-          {/* INPUT FIELD - Always visible now so you can type */}
-          <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-[#0f172a]/50 backdrop-blur-md">
+          {/* INPUT FIELD - Now properly sticky and accessible */}
+          <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-xl z-30">
             <div className="max-w-4xl mx-auto flex gap-4 items-end bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-2 focus-within:ring-4 focus-within:ring-blue-500/5 transition-all">
               <textarea 
                 value={input} 
@@ -255,7 +266,7 @@ export default function GeneratePage() {
               <button 
                 onClick={handleSend} 
                 disabled={loading || !input.trim()} 
-                className="bg-slate-900 dark:bg-blue-600 text-white rounded-2xl px-6 py-3.5 text-sm font-bold hover:opacity-90 transition disabled:opacity-30"
+                className="bg-slate-900 dark:bg-blue-600 text-white rounded-2xl px-6 py-3.5 text-sm font-bold hover:opacity-90 transition disabled:opacity-30 active:scale-95"
               >
                 Send
               </button>
