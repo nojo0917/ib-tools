@@ -90,9 +90,10 @@ export default function HumanizePage() {
       {/* --- MATCHED NAVBAR --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {/* Placeholder to match the sidebar toggle button spacing from Generate page */}
-            <div className="p-2 text-transparent select-none">⇠</div>
+          <div className="flex items-center">
+            {/* MATCHING SPACER: w-14 ensures the logo position is identical across all tools */}
+            <div className="w-14" aria-hidden="true" />
+            
             <Link href="/home" className="text-xl font-bold text-blue-600 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
               IB Study Tools
             </Link>
