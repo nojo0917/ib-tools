@@ -1,14 +1,12 @@
 @import "tailwindcss";
 
-/* This line tells Tailwind v4 to use your config file for dark mode logic */
-@config "../../tailwind.config.ts";
+@config "../tailwind.config.ts";
 
 /* LIGHT MODE (Default) */
 :root {
   --background: #ffffff;
   --foreground: #171717;
   
-  /* Appearance Page Variables - Light Version */
   --navy2: #f8fafc;
   --border2: #e2e8f0;
   --border: #cbd5e1;
@@ -18,12 +16,11 @@
   --accent2: #3b82f6;
 }
 
-/* DARK MODE (Triggered by the .dark class from next-themes) */
+/* DARK MODE */
 .dark {
   --background: #0a0a0a;
   --foreground: #ededed;
 
-  /* Appearance Page Variables - Dark Version */
   --navy2: #1e293b;
   --border2: #334155;
   --border: #475569;
@@ -46,7 +43,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Standard Table Styling */
+/* Table Styles */
 .prose table {
   width: 100%;
   border-collapse: collapse;
@@ -62,7 +59,6 @@ body {
   font-weight: 600;
 }
 
-/* Explicitly styling table headers for dark mode */
 .dark .prose table th {
   background-color: #1e293b;
   border-color: #334155;
