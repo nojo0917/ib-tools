@@ -37,7 +37,6 @@ export default function AICheckPage() {
     setLoading(false)
   }
 
-  // Updated colors to pop better against the dark background
   const getColor = (score: number) => {
     if (score > 70) return 'text-red-400'
     if (score > 40) return 'text-yellow-400'
@@ -51,10 +50,8 @@ export default function AICheckPage() {
   }
 
   return (
-    // Re-added the deep blue gradient background
     <div className="min-h-screen flex flex-col text-white bg-gradient-to-br from-[#15284c] to-[#0a1128]">
       
-      {/* Re-added the transparent glassmorphism navbar */}
       <nav className="border-b border-white/10 px-6 py-4 flex justify-between items-center bg-black/10 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <h1 className="font-bold text-lg text-white" style={{ fontFamily: 'Georgia, serif' }}>
@@ -76,8 +73,7 @@ export default function AICheckPage() {
           <div>
             <h2 className="text-2xl font-bold text-white mb-2">AI Check</h2>
             <p className="text-gray-300 text-sm leading-relaxed">
-              Paste text to check if it was AI-generated. Results come from two independent detectors. <br/>
-              <span className="text-blue-300 font-medium">Note: The Sapling AI detector is heavily weighted as it is significantly more accurate at detecting modern AI models.</span>
+              Paste text to check if it was AI-generated. Results come from two independent detectors.
             </p>
           </div>
 
@@ -131,7 +127,6 @@ export default function AICheckPage() {
                     <div className="flex justify-between items-end text-sm mb-2">
                       <span className="font-medium text-gray-200 flex items-center gap-2">
                         {d.service}
-                        {/* Add "Most Accurate" badge to Sapling */}
                         {d.service.toLowerCase().includes('sapling') && (
                           <span className="bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] px-1.5 py-0.5 rounded uppercase tracking-wider font-bold">
                             Most Accurate
