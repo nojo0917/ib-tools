@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useTheme } from 'next-themes' // <-- Import added
 
 type Theme = 'dark' | 'light' | 'system'
 
@@ -14,6 +15,7 @@ const DISPLAY_TOGGLES = [
 
 export default function AppearancePage() {
   const supabase = createClient()
+  const { setTheme: setAppTheme } = useTheme() // <-- Hook into the active app theme
   const [theme, setTheme] = useState<Theme>('dark')
   const [display, setDisplay] = useState<Record<string, boolean>>({
     compactSidebar: false,
@@ -27,10 +29,13 @@ export default function AppearancePage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       const meta = data.user?.user_metadata ?? {}
-      if (meta.theme) setTheme(meta.theme)
+      if (meta.theme) {
+        setTheme(meta.theme)
+        setAppTheme(meta.theme) // Sync app theme on initial load
+      }
       if (meta.display) setDisplay((d) => ({ ...d, ...meta.display }))
     })
-  }, [supabase])
+  }, [supabase, setAppTheme])
 
   function showToast(msg: string, type: 'success' | 'error' = 'success') {
     setToast({ msg, type })
@@ -41,8 +46,12 @@ export default function AppearancePage() {
     setLoading(true)
     const { error } = await supabase.auth.updateUser({ data: { theme, display } })
     setLoading(false)
-    if (error) showToast(error.message, 'error')
-    else showToast('Appearance preferences saved')
+    if (error) {
+      showToast(error.message, 'error')
+    } else {
+      setAppTheme(theme) // <-- Change the actual website theme instantly when saving!
+      showToast('Appearance preferences saved')
+    }
   }
 
   const THEMES: { id: Theme; label: string; preview: string }[] = [
