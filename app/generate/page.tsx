@@ -1,13 +1,11 @@
 'use client'
-import ReactMarkdown from 'react-markdown'
-import remarkMath from 'remark-math'
-import remarkGfm from 'remark-gfm'
-import rehypeKatex from 'rehype-katex'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import 'katex/dist/katex.min.css' // Ensure KaTeX styles are imported for proper rendering
+
+// Note: Removed ReactMarkdown and Katex imports to prevent the silent crash 
+// caused by the resetting package.json dependencies.
 
 const SUBJECTS = [
   'Mathematics AA', 'Mathematics AI', 'Chemistry', 'Biology', 'Physics',
@@ -100,11 +98,7 @@ export default function GeneratePage() {
     if (messagesForAPI.length === 0) {
         messagesForAPI.push({
             role: 'system',
-            content: `You are an expert IB Tutor for ${subject}. 
-            CRITICAL MATH RULE: Always use LaTeX for math. 
-            - For inline math, use single dollar signs like $E=mc^2$. 
-            - For standalone equations/fractions, use double dollar signs like $$\\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$. 
-            Never use raw slashes like x/2 for fractions. Ensure text is clean and professional.`
+            content: `You are an expert IB Tutor for ${subject}. Speak clearly and professionally. Do not use random characters.`
         });
     }
     messagesForAPI.push(userMessage);
@@ -156,21 +150,21 @@ export default function GeneratePage() {
         loadHistory()
       }
     } catch (err) {
-      setError('Tutor connection lost.');
+      setError('Connection lost.');
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300">
+    <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100">
       
-      {/* --- RECTIFIED NAVBAR --- */}
+      {/* --- ALIGNED NAVBAR --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
-            {/* Sidebar Toggle or Placeholder Spacer to maintain Alignment */}
-            <div className="w-14 flex items-center"> 
+            {/* FIXED WIDTH SPACER TO MATCH HUMANIZER/AI CHECK PAGES */}
+            <div className="w-12 flex items-center"> 
                 <button 
                     onClick={() => setSidebarOpen(!sidebarOpen)} 
                     className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all shadow-sm group"
@@ -186,14 +180,11 @@ export default function GeneratePage() {
           </div>
 
           <div className="hidden md:flex items-center gap-1 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl p-1">
-            {navLinks.map((link) => {
-              const isActive = pathname === link.href
-              return (
-                <Link key={link.href} href={link.href} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${isActive ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}>
+            {navLinks.map((link) => (
+                <Link key={link.href} href={link.href} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${pathname === link.href ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}>
                   {link.name}
                 </Link>
-              )
-            })}
+            ))}
           </div>
 
           <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-red-500 transition">Logout</button>
@@ -201,23 +192,17 @@ export default function GeneratePage() {
       </nav>
 
       <div className="flex flex-1 overflow-hidden">
-        
-        {/* --- SIDEBAR --- */}
         {sidebarOpen && (
-          <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0 transition-all">
+          <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0">
             <div className="p-4">
-              <button onClick={handleNew} className="w-full bg-slate-900 dark:bg-blue-600 text-white rounded-xl py-3 text-sm font-bold hover:opacity-90 transition shadow-lg dark:shadow-none">
-                + New Session
-              </button>
+              <button onClick={handleNew} className="w-full bg-slate-900 dark:bg-blue-600 text-white rounded-xl py-3 text-sm font-bold shadow-lg">+ New Session</button>
             </div>
             <div className="flex-1 overflow-y-auto px-2 space-y-1">
               {history.map(gen => (
                 <button key={gen.id} onClick={() => loadGeneration(gen)} className={`w-full text-left p-3 rounded-xl transition-all group relative ${currentChatId === gen.id ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate pr-4">
-                    {gen.subject} — {gen.task_type}
-                  </p>
+                  <p className="text-xs font-bold truncate pr-4">{gen.subject} — {gen.task_type}</p>
                   <p className="text-[10px] text-slate-400 truncate mt-1">{gen.input}</p>
-                  <span onClick={(e) => { e.stopPropagation(); handleDelete(gen.id) }} className="absolute right-2 top-3 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 text-xs transition">✕</span>
+                  <span onClick={(e) => { e.stopPropagation(); handleDelete(gen.id) }} className="absolute right-2 top-3 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 text-xs">✕</span>
                 </button>
               ))}
             </div>
@@ -227,60 +212,43 @@ export default function GeneratePage() {
         <main className="flex-1 flex flex-col relative bg-white dark:bg-[#0f172a]">
           {!started && (
             <div className="absolute inset-0 flex items-center justify-center p-6 z-40 bg-white dark:bg-[#0f172a]">
-              <div className="max-w-md w-full space-y-8 text-center animate-in fade-in zoom-in duration-300">
+              <div className="max-w-md w-full space-y-8 text-center">
                 <div className="space-y-2">
                   <h2 className="text-4xl font-black tracking-tight dark:text-white">Tutor Mode</h2>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Configure your study session to begin.</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Configure your study session.</p>
                 </div>
                 <div className="grid gap-4">
-                  <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold focus:border-blue-500 outline-none transition-all dark:text-white cursor-pointer">
+                  <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold focus:border-blue-500 outline-none dark:text-white">
                     <option value="">Select Subject</option>
                     {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
-                  <select value={taskType} onChange={e => setTaskType(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold focus:border-blue-500 outline-none transition-all dark:text-white cursor-pointer">
+                  <select value={taskType} onChange={e => setTaskType(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold focus:border-blue-500 outline-none dark:text-white">
                     <option value="">Select Task Type</option>
                     {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
-                  
-                  <button 
-                    onClick={() => { if(subject && taskType) setStarted(true); else setError('Select both fields') }}
-                    className="w-full bg-blue-600 text-white rounded-2xl py-4 font-bold hover:bg-blue-700 transition shadow-xl shadow-blue-500/10 active:scale-95"
-                  >
-                    Start Session
-                  </button>
-                  {error && <p className="text-red-500 text-xs font-bold uppercase tracking-widest animate-bounce">{error}</p>}
+                  <button onClick={() => { if(subject && taskType) setStarted(true); else setError('Select both fields') }} className="w-full bg-blue-600 text-white rounded-2xl py-4 font-bold shadow-xl active:scale-95">Start Session</button>
+                  {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
                 </div>
               </div>
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto p-6 space-y-8">
-            <div className="max-w-4xl mx-auto space-y-8 pb-32">
+          <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-32">
+            <div className="max-w-4xl mx-auto space-y-8">
               {messages.filter(m => m.role !== 'system').map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[85%] rounded-3xl px-6 py-4 shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200'}`}>
-                    {msg.role === 'assistant' ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed">
-                        <ReactMarkdown 
-                          remarkPlugins={[remarkMath, remarkGfm]} 
-                          rehypePlugins={[rehypeKatex]}
-                        >
-                          {msg.content}
-                        </ReactMarkdown>
-                      </div>
-                    ) : (
-                      <p className="text-sm font-medium leading-relaxed">{msg.content}</p>
-                    )}
+                    <p className="text-sm font-medium leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                   </div>
                 </div>
               ))}
-              {loading && <div className="text-xs font-bold text-blue-500 animate-pulse bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-full w-fit">Tutor is drafting...</div>}
+              {loading && <div className="text-xs font-bold text-blue-500 animate-pulse px-4 py-2">Tutor is drafting...</div>}
               <div ref={bottomRef} />
             </div>
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-xl z-30">
-            <div className="max-w-4xl mx-auto flex gap-4 items-end bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-2 focus-within:ring-4 focus-within:ring-blue-500/5 transition-all">
+          <div className="absolute bottom-0 left-0 right-0 p-6 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-xl border-t border-slate-100 dark:border-slate-800">
+            <div className="max-w-4xl mx-auto flex gap-4 items-end bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-2">
               <textarea 
                 value={input} 
                 onChange={e => setInput(e.target.value)} 
@@ -289,13 +257,7 @@ export default function GeneratePage() {
                 className="flex-1 bg-transparent border-none p-4 text-sm focus:outline-none resize-none dark:text-white" 
                 rows={1} 
               />
-              <button 
-                onClick={handleSend} 
-                disabled={loading || !input.trim()} 
-                className="bg-slate-900 dark:bg-blue-600 text-white rounded-2xl px-6 py-3.5 text-sm font-bold hover:opacity-90 transition disabled:opacity-30 active:scale-95"
-              >
-                Send
-              </button>
+              <button onClick={handleSend} disabled={loading || !input.trim()} className="bg-slate-900 dark:bg-blue-600 text-white rounded-2xl px-6 py-3.5 text-sm font-bold disabled:opacity-30">Send</button>
             </div>
           </div>
         </main>
