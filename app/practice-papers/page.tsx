@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
@@ -43,50 +43,48 @@ export default function PracticePapersPage() {
     { name: 'Practice Papers', href: '/practice-papers' },
   ]
 
-  // 1. Fixed the data fetching logic
-  const loadPapers = async () => {
-    setLoading(true);
+  // Fetch papers from Supabase ordered by your custom index
+  const loadPapers = useCallback(async () => {
+    setLoading(true)
     const { data, error } = await supabase
       .from('past_papers')
       .select('*')
-      .order('order_index', { ascending: true })
-      .order('year', { ascending: false });
+      .order('order_index', { ascending: true }) // Primary sort
+      .order('year', { ascending: false })      // Secondary sort
       
     if (error) {
-      console.error("Error loading papers:", error.message);
+      console.error('Error fetching papers:', error.message)
     } else if (data) { 
-      setPapers(data as Paper[]); 
-      setFiltered(data as Paper[]); 
+      setPapers(data as Paper[]) 
     }
-    setLoading(false);
-  }
+    setLoading(false)
+  }, [supabase])
 
-  // 2. Initial Load
   useEffect(() => { 
-    loadPapers();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    loadPapers() 
+  }, [loadPapers])
 
-  // 3. Filter Logic
+  // Filter logic runs whenever subject, type, or the main paper list changes
   useEffect(() => {
-    let result = [...papers]; // Create a copy to avoid mutation
+    let result = [...papers]
     if (subject !== 'All Subjects') {
-      result = result.filter(p => p.subject === subject);
+      result = result.filter(p => p.subject === subject)
     }
     if (selectedType !== 'All Types') {
-      result = result.filter(p => p.paper_type === selectedType);
+      result = result.filter(p => p.paper_type === selectedType)
     }
-    setFiltered(result);
-  }, [subject, selectedType, papers]);
+    setFiltered(result)
+  }, [subject, selectedType, papers])
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.replace('/login'); // Use replace instead of push for auth
+    await supabase.auth.signOut()
+    router.replace('/login')
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300">
       
-      {/* Navigation */}
+      {/* Top Navigation */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
@@ -106,7 +104,11 @@ export default function PracticePapersPage() {
 
           <div className="hidden md:flex items-center gap-1 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl p-1">
             {navLinks.map((link) => (
-                <Link key={link.href} href={link.href} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${pathname === link.href ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Link 
+                  key={link.href} 
+                  href={link.href} 
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${pathname === link.href ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                >
                   {link.name}
                 </Link>
             ))}
@@ -117,7 +119,7 @@ export default function PracticePapersPage() {
       </nav>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
+        {/* Sidebar Filter */}
         {sidebarOpen && (
           <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0">
             <div className="p-6 space-y-6">
@@ -135,7 +137,7 @@ export default function PracticePapersPage() {
           </aside>
         )}
 
-        {/* Main Content */}
+        {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto bg-white dark:bg-[#0f172a] p-8 lg:p-12">
           <div className="max-w-4xl mx-auto space-y-8">
             <header className="space-y-2">
@@ -143,7 +145,7 @@ export default function PracticePapersPage() {
               <p className="text-slate-500 dark:text-slate-400 text-base font-medium">Archive of exam-style questions and official materials.</p>
             </header>
 
-            {/* Type Filter Buttons */}
+            {/* Horizontal Paper Type Tabs */}
             <div className="flex flex-wrap gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
               {PAPER_TYPES.map((type) => (
                 <button
@@ -160,9 +162,11 @@ export default function PracticePapersPage() {
               ))}
             </div>
 
+            {/* Paper Grid */}
             {loading ? (
-              <div className="flex items-center gap-2 text-blue-500 font-bold py-10">
-                <span className="animate-spin">🌀</span> Loading papers...
+              <div className="flex items-center gap-3 text-blue-500 font-bold py-10">
+                <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                Loading resources...
               </div>
             ) : filtered.length === 0 ? (
               <div className="text-center py-20 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
@@ -180,9 +184,23 @@ export default function PracticePapersPage() {
                         <span className="text-[10px] font-black bg-blue-50 dark:bg-blue-500/10 text-blue-600 px-2.5 py-1 rounded-lg">{paper.paper_type}</span>
                       </div>
                     </div>
+                    
                     <div className="flex gap-3 mt-auto">
-                      <a href={paper.file_url} target="_blank" rel="noopener noreferrer" className="flex-1 text-center text-xs font-bold bg-slate-100 dark:bg-slate-800 dark:text-white rounded-xl py-3 hover:bg-slate-200 dark:hover:bg-slate-700 transition">View</a>
-                      <a href={paper.file_url} download className="flex-1 text-center text-xs font-bold bg-blue-600 text-white rounded-xl py-3 hover:bg-blue-700 transition shadow-lg shadow-blue-500/20">Download</a>
+                      <a 
+                        href={paper.file_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="flex-1 text-center text-xs font-bold bg-slate-100 dark:bg-slate-800 dark:text-slate-100 rounded-xl py-3 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                      >
+                        View
+                      </a>
+                      <a 
+                        href={paper.file_url} 
+                        download 
+                        className="flex-1 text-center text-xs font-bold bg-blue-600 text-white rounded-xl py-3 hover:bg-blue-700 transition shadow-lg shadow-blue-500/20"
+                      >
+                        Download
+                      </a>
                     </div>
                   </div>
                 ))}
