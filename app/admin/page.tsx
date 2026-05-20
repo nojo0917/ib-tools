@@ -3,14 +3,10 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 const SUBJECTS = [
-  'Mathematics AA', 'Mathematics AI',
-  'Chemistry', 'Biology', 'Physics',
-  'English Language & Literature', 'English Literature',
-  'History', 'Economics', 'Psychology',
-  'Global Politics',
-  'Theory of Knowledge (TOK)',
-  'Extended Essay (EE)',
-  'Computer Science',
+  'Mathematics AA', 'Mathematics AI', 'Chemistry', 'Biology', 'Physics',
+  'English Language & Literature', 'English Literature', 'History', 'Economics', 
+  'Psychology', 'Global Politics', 'Theory of Knowledge (TOK)', 
+  'Extended Essay (EE)', 'Computer Science',
 ]
 
 export default function AdminPage() {
@@ -24,9 +20,8 @@ export default function AdminPage() {
   const [papers, setPapers] = useState<any[]>([]) 
   const supabase = createClient()
 
-  const ADMIN_UID = 'c1f4b88e-c5dd-49cd-b72f-1a5d14dab1fe' // <--- REPLACE THIS
+  const ADMIN_UID = 'c1f4b88e-c5dd-49cd-b72f-1a5d14dab1fe'
 
-  // 1. GATEKEEPER: Redirect anyone who isn't you
   useEffect(() => {
     const checkAdmin = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -37,152 +32,156 @@ export default function AdminPage() {
     checkAdmin();
   }, [supabase]);
 
-  // 2. FETCH PAPERS: Load the list on page load
   useEffect(() => {
-    const fetchPapers = async () => {
-      const { data, error } = await supabase
-        .from('past_papers')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (data) setPapers(data);
-    };
     fetchPapers();
   }, [supabase]);
 
-  // 3. DELETE FUNCTION: Remove from Storage and DB
-  const deletePaper = async (id: string, fileUrl: string) => {
-    const confirmed = window.confirm("Are you sure you want to delete this paper?");
-    if (!confirmed) return;
+  const fetchPapers = async () => {
+    const { data } = await supabase
+      .from('past_papers')
+      .select('*')
+      .order('order_index', { ascending: true }); // Sort by our custom order
+    
+    if (data) setPapers(data);
+  };
 
+  // --- REORDERING LOGIC ---
+  const movePaper = async (index: number, direction: 'up' | 'down') => {
+    const paperToMove = papers[index];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    const paperToSwapWith = papers[targetIndex];
+
+    if (!paperToSwapWith) return; // Already at the top or bottom
+
+    setLoading(true);
+
+    // Swap their order_index values in the DB
+    const { error: err1 } = await supabase
+      .from('past_papers')
+      .update({ order_index: paperToSwapWith.order_index })
+      .eq('id', paperToMove.id);
+
+    const { error: err2 } = await supabase
+      .from('past_papers')
+      .update({ order_index: paperToMove.order_index })
+      .eq('id', paperToSwapWith.id);
+
+    if (err1 || err2) {
+      alert("Error reordering papers");
+    } else {
+      await fetchPapers();
+    }
+    setLoading(false);
+  };
+
+  const deletePaper = async (id: string, fileUrl: string) => {
+    const confirmed = window.confirm("Are you sure?");
+    if (!confirmed) return;
     try {
       const fileName = fileUrl.split('/').pop();
-      if (fileName) {
-        const decodedFileName = decodeURIComponent(fileName);
-        await supabase.storage.from('past-papers').remove([decodedFileName]);
-      }
-
-      const { error } = await supabase.from('past_papers').delete().eq('id', id);
-      if (error) throw error;
-
+      if (fileName) await supabase.storage.from('past-papers').remove([decodeURIComponent(fileName)]);
+      await supabase.from('past_papers').delete().eq('id', id);
       setPapers(prev => prev.filter(paper => paper.id !== id));
-      alert("Deleted successfully!");
     } catch (error) {
-      console.error("Error:", error);
       alert("Delete failed.");
     }
   };
 
-  // 4. UPLOAD FUNCTION
   const handleUpload = async () => {
     if (!subject || !title || !file) {
-      setMessage('Please fill in subject, title and select a file.')
-      return
+      setMessage('Fill all fields.'); return;
     }
-    setLoading(true)
-    setMessage('')
+    setLoading(true);
+    setMessage('');
 
-    const fileName = `${subject}/${Date.now()}_${file.name}`
-    const { error: uploadError } = await supabase.storage
-      .from('past-papers')
-      .upload(fileName, file)
+    // Determine the next order index (current max + 1)
+    const nextIndex = papers.length > 0 ? Math.max(...papers.map(p => p.order_index || 0)) + 1 : 0;
+
+    const fileName = `${subject}/${Date.now()}_${file.name}`;
+    const { error: uploadError } = await supabase.storage.from('past-papers').upload(fileName, file);
 
     if (uploadError) {
-      setMessage('Upload failed: ' + uploadError.message)
-      setLoading(false)
-      return
+      setMessage('Upload failed'); setLoading(false); return;
     }
 
-    const { data: urlData } = supabase.storage.from('past-papers').getPublicUrl(fileName)
+    const { data: urlData } = supabase.storage.from('past-papers').getPublicUrl(fileName);
 
     const { error: dbError } = await supabase.from('past_papers').insert({
-      subject,
-      title,
+      subject, title, 
       year: year ? parseInt(year) : null,
       paper_type: paperType,
       file_url: urlData.publicUrl,
-    })
+      order_index: nextIndex // Assign the next position
+    });
 
     if (dbError) {
-      setMessage('Database error: ' + dbError.message)
+      setMessage('DB error: ' + dbError.message);
     } else {
-      setMessage('✅ Paper uploaded successfully!')
-      // Refresh list after upload
-      const { data } = await supabase.from('past_papers').select('*').order('created_at', { ascending: false });
-      if (data) setPapers(data);
-      
-      setTitle('')
-      setYear('')
-      setPaperType('')
-      setFile(null)
+      setMessage('✅ Uploaded!');
+      fetchPapers();
+      setTitle(''); setYear(''); setPaperType(''); setFile(null);
     }
-    setLoading(false)
+    setLoading(false);
   }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-xl mx-auto space-y-8">
+      <div className="max-w-2xl mx-auto space-y-8">
         {/* UPLOAD FORM */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Admin — Upload Past Paper</h1>
-          <p className="text-gray-500 text-sm mb-6">Access restricted to admin only.</p>
-
-          {message && (
-            <div className={`p-3 rounded-lg text-sm mb-4 ${message.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-              {message}
-            </div>
-          )}
-
-          <div className="bg-white border rounded-xl p-6 space-y-4 shadow-sm">
-            <select value={subject} onChange={e => setSubject(e.target.value)}
-              className="w-full border rounded-lg p-3 text-sm text-gray-900 bg-white">
-              <option value="">Select subject...</option>
-              {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-
-            <input type="text" placeholder="Title" value={title} onChange={e => setTitle(e.target.value)}
-              className="w-full border rounded-lg p-3 text-sm text-gray-900" />
-
-            <input type="number" placeholder="Year" value={year} onChange={e => setYear(e.target.value)}
-              className="w-full border rounded-lg p-3 text-sm text-gray-900" />
-
-            <input type="text" placeholder="Paper type" value={paperType} onChange={e => setPaperType(e.target.value)}
-              className="w-full border rounded-lg p-3 text-sm text-gray-900" />
-
-            <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center">
-              <input type="file" accept=".pdf" onChange={e => setFile(e.target.files?.[0] || null)} className="text-sm text-gray-600" />
-            </div>
-
-            <button onClick={handleUpload} disabled={loading}
-              className="w-full bg-blue-600 text-white rounded-lg py-3 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition">
-              {loading ? 'Uploading...' : 'Upload Paper'}
-            </button>
+        <div className="bg-white border rounded-xl p-6 space-y-4 shadow-sm">
+          <h1 className="text-xl font-bold">Upload New Paper</h1>
+          <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full border rounded-lg p-3 text-sm bg-white">
+            <option value="">Select subject...</option>
+            {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <input type="text" placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} className="w-full border rounded-lg p-3 text-sm" />
+          <div className="grid grid-cols-2 gap-4">
+            <input type="number" placeholder="Year" value={year} onChange={e => setYear(e.target.value)} className="border rounded-lg p-3 text-sm" />
+            <input type="text" placeholder="Paper type" value={paperType} onChange={e => setPaperType(e.target.value)} className="border rounded-lg p-3 text-sm" />
           </div>
+          <input type="file" accept=".pdf" onChange={e => setFile(e.target.files?.[0] || null)} className="text-xs block w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+          <button onClick={handleUpload} disabled={loading} className="w-full bg-blue-600 text-white rounded-lg py-3 text-sm font-bold disabled:opacity-50">
+            {loading ? 'Processing...' : 'Upload Paper'}
+          </button>
+          {message && <p className="text-center text-sm font-bold mt-2">{message}</p>}
         </div>
 
-        {/* MANAGE PAPERS SECTION */}
-        <div className="pt-8 border-t">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Manage Existing Papers</h2>
-          <div className="space-y-3">
-            {papers.length === 0 ? (
-              <p className="text-gray-400 text-sm italic text-center py-4">No papers found or loading...</p>
-            ) : (
-              papers.map((paper) => (
-                <div key={paper.id} className="bg-white border rounded-lg p-4 flex justify-between items-center shadow-sm">
-                  <div>
-                    <p className="font-semibold text-gray-900 text-sm">{paper.title}</p>
-                    <p className="text-xs text-gray-500">{paper.subject} • {paper.year}</p>
-                  </div>
-                  <button
-                    onClick={() => deletePaper(paper.id, paper.file_url)}
-                    className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100 transition"
-                  >
-                    Delete
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
+        {/* MANAGE SECTION */}
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold">Manage & Reorder</h2>
+          {papers.map((paper, index) => (
+            <div key={paper.id} className="bg-white border rounded-xl p-4 flex items-center gap-4 shadow-sm group">
+              {/* Order Controls */}
+              <div className="flex flex-col gap-1">
+                <button 
+                  disabled={index === 0 || loading}
+                  onClick={() => movePaper(index, 'up')}
+                  className="p-1 hover:bg-slate-100 rounded disabled:opacity-20"
+                >
+                  ▲
+                </button>
+                <button 
+                  disabled={index === papers.length - 1 || loading}
+                  onClick={() => movePaper(index, 'down')}
+                  className="p-1 hover:bg-slate-100 rounded disabled:opacity-20"
+                >
+                  ▼
+                </button>
+              </div>
+              
+              <div className="flex-1">
+                <p className="font-bold text-sm leading-none">{paper.title}</p>
+                <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-wider">{paper.subject} • {paper.year}</p>
+              </div>
+
+              <button
+                onClick={() => deletePaper(paper.id, paper.file_url)}
+                className="opacity-0 group-hover:opacity-100 px-3 py-1.5 text-red-500 text-xs font-bold transition"
+              >
+                Delete
+              </button>
+            </div>
+          ))}
         </div>
       </div>
     </div>

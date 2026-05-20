@@ -11,19 +11,18 @@ const SUBJECTS = [
   'Extended Essay (EE)', 'Computer Science',
 ]
 
-// New Filter Options
 const PAPER_TYPES = ['All Types', 'Paper 1', 'Paper 2', 'Paper 3', 'Markscheme', 'Specimen']
 
 interface Paper {
   id: string; subject: string; title: string; year: number;
-  paper_type: string; file_url: string;
+  paper_type: string; file_url: string; order_index: number;
 }
 
 export default function PracticePapersPage() {
   const [papers, setPapers] = useState<Paper[]>([])
   const [filtered, setFiltered] = useState<Paper[]>([])
   const [subject, setSubject] = useState('All Subjects')
-  const [selectedType, setSelectedType] = useState('All Types') // New State
+  const [selectedType, setSelectedType] = useState('All Types')
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   
@@ -41,7 +40,6 @@ export default function PracticePapersPage() {
 
   useEffect(() => { loadPapers() }, [])
 
-  // Updated Filter Logic for both Subject AND Paper Type
   useEffect(() => {
     let result = papers
     if (subject !== 'All Subjects') {
@@ -54,7 +52,13 @@ export default function PracticePapersPage() {
   }, [subject, selectedType, papers])
 
   const loadPapers = async () => {
-    const { data } = await supabase.from('past_papers').select('*').order('year', { ascending: false })
+    // UPDATED: Now sorts by your custom order_index first, then year
+    const { data } = await supabase
+      .from('past_papers')
+      .select('*')
+      .order('order_index', { ascending: true })
+      .order('year', { ascending: false })
+      
     if (data) { setPapers(data); setFiltered(data); }
     setLoading(false)
   }
@@ -121,7 +125,6 @@ export default function PracticePapersPage() {
               <p className="text-slate-500 dark:text-slate-400 text-base font-medium">Archive of exam-style questions and official materials.</p>
             </header>
 
-            {/* --- NEW PAPER TYPE FILTER BAR --- */}
             <div className="flex flex-wrap gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
               {PAPER_TYPES.map((type) => (
                 <button
