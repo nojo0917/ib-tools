@@ -19,7 +19,8 @@ interface Paper {
   title: string; 
   year: number;
   paper_type: string; 
-  file_url: string; 
+  file_url: string;          // Official Save My Exams Link
+  model_answer_url: string;   // Your AI Response Link
   order_index: number;
 }
 
@@ -43,13 +44,11 @@ export default function PracticePapersPage() {
     { name: 'Practice Papers', href: '/practice-papers' },
   ]
 
-  // Fetch papers from Supabase
   const loadPapers = useCallback(async () => {
     setLoading(true)
     const { data, error } = await supabase
       .from('past_papers')
       .select('*')
-      // This ensures the student view follows the manual order you set in Admin
       .order('order_index', { ascending: true }) 
       
     if (error) {
@@ -64,18 +63,10 @@ export default function PracticePapersPage() {
     loadPapers() 
   }, [loadPapers])
 
-  // Filter logic: Runs whenever filters change or papers are loaded
   useEffect(() => {
     let result = [...papers]
-    
-    if (subject !== 'All Subjects') {
-      result = result.filter(p => p.subject === subject)
-    }
-    
-    if (selectedType !== 'All Types') {
-      result = result.filter(p => p.paper_type === selectedType)
-    }
-    
+    if (subject !== 'All Subjects') result = result.filter(p => p.subject === subject)
+    if (selectedType !== 'All Types') result = result.filter(p => p.paper_type === selectedType)
     setFiltered(result)
   }, [subject, selectedType, papers])
 
@@ -87,7 +78,6 @@ export default function PracticePapersPage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300">
       
-      {/* Navigation Bar */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
@@ -125,7 +115,6 @@ export default function PracticePapersPage() {
       </nav>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar Subject Filter */}
         {sidebarOpen && (
           <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0">
             <div className="p-6 space-y-6">
@@ -143,15 +132,13 @@ export default function PracticePapersPage() {
           </aside>
         )}
 
-        {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto bg-white dark:bg-[#0f172a] p-8 lg:p-12">
           <div className="max-w-4xl mx-auto space-y-8">
             <header className="space-y-2">
               <h2 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Practice Papers</h2>
-              <p className="text-slate-500 dark:text-slate-400 text-base font-medium">Archive of exam-style questions and official materials.</p>
+              <p className="text-slate-500 dark:text-slate-400 text-base font-medium">Curated exam-style questions with AI-powered support.</p>
             </header>
 
-            {/* Paper Type Chips */}
             <div className="flex flex-wrap gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
               {PAPER_TYPES.map((type) => (
                 <button
@@ -168,7 +155,6 @@ export default function PracticePapersPage() {
               ))}
             </div>
 
-            {/* Content Display */}
             {loading ? (
               <div className="flex items-center gap-3 text-blue-500 font-bold py-10">
                 <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -202,21 +188,22 @@ export default function PracticePapersPage() {
                       </div>
                     </div>
                     
-                    <div className="flex gap-3 mt-auto">
+                    <div className="flex flex-col gap-3 mt-auto">
                       <a 
                         href={paper.file_url} 
                         target="_blank" 
                         rel="noopener noreferrer" 
-                        className="flex-1 text-center text-xs font-bold bg-slate-100 dark:bg-slate-800 dark:text-slate-100 rounded-xl py-3 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                        className="w-full text-center text-xs font-bold bg-slate-100 dark:bg-slate-800 dark:text-slate-100 rounded-xl py-3 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
                       >
-                        View
+                        View Official Paper
                       </a>
                       <a 
-                        href={paper.file_url} 
-                        download 
-                        className="flex-1 text-center text-xs font-bold bg-blue-600 text-white rounded-xl py-3 hover:bg-blue-700 transition shadow-lg shadow-blue-500/20"
+                        href={paper.model_answer_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="w-full text-center text-xs font-bold bg-blue-600 text-white rounded-xl py-3 hover:bg-blue-700 transition shadow-lg shadow-blue-500/20"
                       >
-                        Download
+                        View AI Model Answer
                       </a>
                     </div>
                   </div>
@@ -224,12 +211,11 @@ export default function PracticePapersPage() {
               </div>
             )}
 
-            {/* --- LEGAL DISCLAIMER SECTION --- */}
             <footer className="mt-20 pt-10 border-t border-slate-100 dark:border-slate-800 text-center">
               <div className="max-w-2xl mx-auto space-y-4">
                 <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium leading-relaxed">
                   <span className="block font-bold mb-1 uppercase tracking-wider text-slate-500 dark:text-slate-400">Legal Disclaimer</span>
-                  The practice papers provided on this platform are sourced from 
+                  The practice papers provided on this platform are linked directly to 
                   <a 
                     href="https://www.savemyexams.com" 
                     target="_blank" 
@@ -238,12 +224,12 @@ export default function PracticePapersPage() {
                   >
                     Save My Exams
                   </a>. 
-                  All model answers and supporting solutions provided alongside these papers have been generated by Gemini AI for educational assistance and guidance.
+                  All model answers and supporting solutions have been independently generated by Gemini AI for educational assistance and guidance.
                 </p>
                 
                 <p className="text-[10px] text-slate-400 dark:text-slate-500 italic leading-relaxed">
                   This platform is an independent educational resource and is <strong>not officially affiliated with, endorsed by, or sponsored by Save My Exams Ltd</strong>. 
-                  IB Study Tools does not claim ownership of the original exam questions. All trademarks belong to their respective owners.
+                  IB Study Tools does not host or redistribute copyrighted materials. All trademarks belong to their respective owners.
                 </p>
               </div>
             </footer>
