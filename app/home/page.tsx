@@ -64,7 +64,6 @@ export default function HomePage() {
           Four powerful tools designed to help you study smarter, <br className="hidden sm:block" /> write better, and understand deeper.
         </p>
 
-        {/* Updated grid to support 4 items: grid-cols-1 (mobile), sm:grid-cols-2 (tablet), lg:grid-cols-4 (desktop) */}
         <div className="grid grid-cols-1 gap-8 w-full max-w-7xl sm:grid-cols-2 lg:grid-cols-4">
           
           {[
@@ -90,10 +89,10 @@ export default function HomePage() {
               cta: 'Rewrite text'
             },
             { 
-              title: 'Past Papers', 
+              title: 'Practice Papers', 
               emoji: '📄', 
-              desc: 'Browse and download IB past papers by subject and year in our verified database.',
-              link: '/past-papers',
+              desc: 'Browse and download exam-style practice papers and official archives by subject.',
+              link: '/practice-papers',
               cta: 'Browse papers'
             }
           ].map((card) => (

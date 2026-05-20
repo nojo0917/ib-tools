@@ -16,7 +16,7 @@ interface Paper {
   paper_type: string; file_url: string;
 }
 
-export default function PastPapersPage() {
+export default function PracticePapersPage() {
   const [papers, setPapers] = useState<Paper[]>([])
   const [filtered, setFiltered] = useState<Paper[]>([])
   const [subject, setSubject] = useState('All Subjects')
@@ -27,12 +27,13 @@ export default function PastPapersPage() {
   const pathname = usePathname()
   const supabase = createClient()
 
+  // Updated NavLinks to reflect Practice Papers
   const navLinks = [
     { name: 'Home', href: '/home' },
     { name: 'Generate', href: '/generate' },
     { name: 'AI Check', href: '/ai-check' },
     { name: 'Humanize', href: '/humanize' },
-    { name: 'Past Papers', href: '/past-papers' },
+    { name: 'Practice Papers', href: '/practice-papers' },
   ]
 
   useEffect(() => { loadPapers() }, [])
@@ -41,6 +42,7 @@ export default function PastPapersPage() {
   }, [subject, papers])
 
   const loadPapers = async () => {
+    // Keep your table name as 'past_papers' in Supabase to avoid breaking the DB connection
     const { data } = await supabase.from('past_papers').select('*').order('year', { ascending: false })
     if (data) { setPapers(data); setFiltered(data); }
     setLoading(false)
@@ -54,12 +56,9 @@ export default function PastPapersPage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300">
       
-      {/* --- STRICTLY MATCHED NAVBAR --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
-          
           <div className="flex items-center">
-            {/* Exactly w-14 and shrink-0 to prevent collapsing, perfectly matching AI Check */}
             <div className="w-14 shrink-0 flex items-center">
                <button 
                   onClick={() => setSidebarOpen(!sidebarOpen)} 
@@ -70,15 +69,8 @@ export default function PastPapersPage() {
                  </span>
                </button>
             </div>
-            
-            {/* Wrapped in a span to force Next.js to apply the inline style. 
-              This guarantees the Georgia font renders correctly. 
-            */}
             <Link href="/home">
-              <span 
-                className="text-xl font-bold text-blue-600 dark:text-white" 
-                style={{ fontFamily: 'Georgia, serif' }}
-              >
+              <span className="text-xl font-bold text-blue-600 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
                 IB Study Tools
               </span>
             </Link>
@@ -127,8 +119,8 @@ export default function PastPapersPage() {
         <main className="flex-1 overflow-y-auto bg-white dark:bg-[#0f172a] p-8 lg:p-12">
           <div className="max-w-4xl mx-auto space-y-10">
             <header className="space-y-2">
-              <h2 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Past Papers</h2>
-              <p className="text-slate-500 dark:text-slate-400 text-base font-medium">Archive of official IB examination papers.</p>
+              <h2 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Practice Papers</h2>
+              <p className="text-slate-500 dark:text-slate-400 text-base font-medium">Archive of exam-style questions and official materials.</p>
             </header>
 
             {loading ? (

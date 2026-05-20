@@ -39,12 +39,13 @@ export default function GeneratePage() {
   const pathname = usePathname()
   const supabase = createClient()
 
+  // Updated NavLinks to point to /practice-papers
   const navLinks = [
     { name: 'Home', href: '/home' },
     { name: 'Generate', href: '/generate' },
     { name: 'AI Check', href: '/ai-check' },
     { name: 'Humanize', href: '/humanize' },
-    { name: 'Past Papers', href: '/past-papers' },
+    { name: 'Practice Papers', href: '/practice-papers' },
   ]
 
   useEffect(() => { loadHistory() }, [])
@@ -126,7 +127,6 @@ export default function GeneratePage() {
       
       setMessages(prev => [...prev, { role: 'assistant', content: '' }])
 
-      // FIXED BUFFERING LOGIC
       let leftover = ''; 
 
       while (reader) {
@@ -135,8 +135,6 @@ export default function GeneratePage() {
         
         const chunk = decoder.decode(value, { stream: true })
         const lines = (leftover + chunk).split('\n');
-        
-        // Save the last potentially incomplete line for the next iteration
         leftover = lines.pop() || '';
 
         for (const line of lines) {
@@ -158,7 +156,6 @@ export default function GeneratePage() {
               });
             }
           } catch (e) {
-             // In case of a parse error on a "supposedly" full line, put it back to leftover
              leftover = line;
           }
         }
@@ -193,10 +190,12 @@ export default function GeneratePage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors">
       
+      {/* --- STRICTLY MATCHED NAVBAR --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
-            <div className="w-14 flex items-center"> 
+            {/* Added shrink-0 for exact consistency with Practice Papers */}
+            <div className="w-14 shrink-0 flex items-center"> 
                 <button 
                     onClick={() => setSidebarOpen(!sidebarOpen)} 
                     className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all shadow-sm"
@@ -206,8 +205,10 @@ export default function GeneratePage() {
                   </span>
                 </button>
             </div>
-            <Link href="/home" className="text-xl font-bold text-blue-600 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
-              IB Study Tools
+            <Link href="/home">
+              <span className="text-xl font-bold text-blue-600 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
+                IB Study Tools
+              </span>
             </Link>
           </div>
 
@@ -225,7 +226,7 @@ export default function GeneratePage() {
 
       <div className="flex flex-1 overflow-hidden">
         {sidebarOpen && (
-          <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0">
+          <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0 animate-in slide-in-from-left duration-200">
             <div className="p-4">
               <button onClick={handleNew} className="w-full bg-slate-900 dark:bg-blue-600 text-white rounded-xl py-3 text-sm font-bold shadow-lg">+ New Session</button>
             </div>
