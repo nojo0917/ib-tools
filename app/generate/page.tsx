@@ -33,13 +33,14 @@ export default function GeneratePage() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [started, setStarted] = useState(false)
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
-
+  
+  // Ref to track the current abort controller
+  const abortControllerRef = useRef<AbortController | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
 
-  // Updated NavLinks to point to /practice-papers
   const navLinks = [
     { name: 'Home', href: '/home' },
     { name: 'Generate', href: '/generate' },
@@ -62,10 +63,21 @@ export default function GeneratePage() {
   }
 
   const handleNew = () => {
+    handleStop() // Stop any active generation
     setSubject(''); setTaskType(''); setMessages([]); setInput(''); setError(''); setStarted(false); setCurrentChatId(null)
   }
 
+  // --- STOP FUNCTION ---
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+      setLoading(false)
+    }
+  }
+
   const loadGeneration = (gen: Generation) => {
+    handleStop()
     setSubject(gen.subject || ''); setTaskType(gen.task_type || ''); setCurrentChatId(gen.id)
     try {
       const parsed = JSON.parse(gen.output)
@@ -89,6 +101,10 @@ export default function GeneratePage() {
       setError('Select subject and task type'); return
     }
 
+    // Initialize AbortController
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
     const currentInput = input; 
     const userMessage: Message = { role: 'user', content: currentInput }
     
@@ -96,8 +112,12 @@ export default function GeneratePage() {
         role: 'system',
         content: `You are an expert IB Tutor for ${subject}. 
         The student is asking for help with a ${taskType}. 
-        Provide clear, academic, and structured guidance that follows IB criteria. 
-        Be professional and encouraging.`
+        STRICT RULES:
+        1. Be extremely concise. Avoid long introductions or filler.
+        2. Use bullet points where possible.
+        3. Do not exceed 300 words unless explicitly asked for a full essay.
+        4. Focus purely on high-mark IB criteria. 
+        Professional and direct.`
     };
 
     const messagesForAPI = [
@@ -117,6 +137,7 @@ export default function GeneratePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subject, taskType, prompt: currentInput, messages: messagesForAPI }),
+        signal: controller.signal // Link the abort signal to the fetch
       })
 
       if (!res.ok) throw new Error('Stream error');
@@ -180,21 +201,25 @@ export default function GeneratePage() {
         }
         loadHistory()
       }
-    } catch (err) {
-      setError('Connection lost. Please try again.');
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        console.log('Generation stopped by user')
+      } else {
+        setError('Connection lost. Please try again.');
+      }
     } finally {
       setLoading(false)
+      abortControllerRef.current = null
     }
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors">
       
-      {/* --- STRICTLY MATCHED NAVBAR --- */}
+      {/* --- NAVBAR --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
-            {/* Added shrink-0 for exact consistency with Practice Papers */}
             <div className="w-14 shrink-0 flex items-center"> 
                 <button 
                     onClick={() => setSidebarOpen(!sidebarOpen)} 
@@ -226,7 +251,7 @@ export default function GeneratePage() {
 
       <div className="flex flex-1 overflow-hidden">
         {sidebarOpen && (
-          <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0 animate-in slide-in-from-left duration-200">
+          <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0">
             <div className="p-4">
               <button onClick={handleNew} className="w-full bg-slate-900 dark:bg-blue-600 text-white rounded-xl py-3 text-sm font-bold shadow-lg">+ New Session</button>
             </div>
@@ -245,17 +270,17 @@ export default function GeneratePage() {
         <main className="flex-1 flex flex-col relative bg-white dark:bg-[#0f172a]">
           {!started && (
             <div className="absolute inset-0 flex items-center justify-center p-6 z-40 bg-white dark:bg-[#0f172a]">
-              <div className="max-w-md w-full space-y-8 text-center animate-in fade-in zoom-in duration-300">
+              <div className="max-w-md w-full space-y-8 text-center">
                 <div className="space-y-2">
                   <h2 className="text-4xl font-black tracking-tight dark:text-white">Tutor Mode</h2>
                   <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Configure your study session.</p>
                 </div>
                 <div className="grid gap-4">
-                  <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold focus:border-blue-500 outline-none dark:text-white">
+                  <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold outline-none dark:text-white">
                     <option value="">Select Subject</option>
                     {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
-                  <select value={taskType} onChange={e => setTaskType(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold focus:border-blue-500 outline-none dark:text-white">
+                  <select value={taskType} onChange={e => setTaskType(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold outline-none dark:text-white">
                     <option value="">Select Task Type</option>
                     {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
@@ -275,7 +300,18 @@ export default function GeneratePage() {
                   </div>
                 </div>
               ))}
-              {loading && <div className="text-xs font-bold text-blue-500 animate-pulse px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-full w-fit">Tutor is drafting...</div>}
+              {loading && (
+                <div className="flex items-center gap-3">
+                  <div className="text-xs font-bold text-blue-500 animate-pulse px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-full w-fit">Tutor is drafting...</div>
+                  {/* STOP BUTTON NEXT TO LOADING */}
+                  <button 
+                    onClick={handleStop}
+                    className="text-[10px] bg-red-50 dark:bg-red-900/20 text-red-500 font-black uppercase tracking-tighter px-3 py-1.5 rounded-lg border border-red-100 dark:border-red-900/50 hover:bg-red-500 hover:text-white transition-all"
+                  >
+                    Stop AI
+                  </button>
+                </div>
+              )}
               <div ref={bottomRef} />
             </div>
           </div>
@@ -290,7 +326,22 @@ export default function GeneratePage() {
                 className="flex-1 bg-transparent border-none p-4 text-sm focus:outline-none resize-none dark:text-white" 
                 rows={1} 
               />
-              <button onClick={handleSend} disabled={loading || !input.trim()} className="bg-slate-900 dark:bg-blue-600 text-white rounded-2xl px-6 py-3.5 text-sm font-bold disabled:opacity-30 active:scale-95 transition-all">Send</button>
+              {loading ? (
+                 <button 
+                  onClick={handleStop}
+                  className="bg-red-500 text-white rounded-2xl px-6 py-3.5 text-sm font-bold active:scale-95 transition-all"
+                 >
+                   Stop
+                 </button>
+              ) : (
+                <button 
+                  onClick={handleSend} 
+                  disabled={!input.trim()} 
+                  className="bg-slate-900 dark:bg-blue-600 text-white rounded-2xl px-6 py-3.5 text-sm font-bold disabled:opacity-30 active:scale-95 transition-all"
+                >
+                  Send
+                </button>
+              )}
             </div>
           </div>
         </main>
