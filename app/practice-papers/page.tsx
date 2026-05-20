@@ -223,6 +223,24 @@ export default function PracticePapersPage() {
                 ))}
               </div>
             )}
+
+            {/* Disclaimer / Credit Section */}
+            <footer className="mt-16 pt-8 border-t border-slate-100 dark:border-slate-800 text-center">
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium leading-relaxed max-w-2xl mx-auto">
+                All practice papers, model answers, and exam resources are curated for educational purposes. 
+                Official materials and original questions are credited to 
+                <a 
+                  href="https://www.savemyexams.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-blue-500 hover:text-blue-600 dark:text-blue-400 hover:underline mx-1 font-bold"
+                >
+                  Save My Exams
+                </a>. 
+                Please visit their website for their full range of professional study resources.
+              </p>
+            </footer>
+
           </div>
         </main>
       </div>
