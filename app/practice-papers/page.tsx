@@ -43,14 +43,14 @@ export default function PracticePapersPage() {
     { name: 'Practice Papers', href: '/practice-papers' },
   ]
 
-  // Fetch papers from Supabase ordered by your custom index
+  // Fetch papers from Supabase
   const loadPapers = useCallback(async () => {
     setLoading(true)
     const { data, error } = await supabase
       .from('past_papers')
       .select('*')
-      .order('order_index', { ascending: true }) // Primary sort
-      .order('year', { ascending: false })      // Secondary sort
+      // CRITICAL: This line ensures the student view matches your Admin order
+      .order('order_index', { ascending: true }) 
       
     if (error) {
       console.error('Error fetching papers:', error.message)
@@ -64,15 +64,18 @@ export default function PracticePapersPage() {
     loadPapers() 
   }, [loadPapers])
 
-  // Filter logic runs whenever subject, type, or the main paper list changes
+  // Filter logic: Runs whenever filters change or papers are loaded
   useEffect(() => {
     let result = [...papers]
+    
     if (subject !== 'All Subjects') {
       result = result.filter(p => p.subject === subject)
     }
+    
     if (selectedType !== 'All Types') {
       result = result.filter(p => p.paper_type === selectedType)
     }
+    
     setFiltered(result)
   }, [subject, selectedType, papers])
 
@@ -84,12 +87,15 @@ export default function PracticePapersPage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300">
       
-      {/* Top Navigation */}
+      {/* Navigation Bar */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
             <div className="w-14 shrink-0 flex items-center">
-               <button onClick={() => setSidebarOpen(!sidebarOpen)} className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+               <button 
+                  onClick={() => setSidebarOpen(!sidebarOpen)} 
+                  className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                >
                  <span className={`text-lg font-bold transition-transform duration-300 ${sidebarOpen ? 'rotate-0' : 'rotate-180'}`}>
                    {sidebarOpen ? '←' : '→'}
                  </span>
@@ -119,12 +125,12 @@ export default function PracticePapersPage() {
       </nav>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar Filter */}
+        {/* Sidebar Subject Filter */}
         {sidebarOpen && (
           <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0">
             <div className="p-6 space-y-6">
               <div>
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Subject Filter</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Subject</h3>
                 <select
                   value={subject}
                   onChange={e => setSubject(e.target.value)}
@@ -137,15 +143,15 @@ export default function PracticePapersPage() {
           </aside>
         )}
 
-        {/* Main Content Area */}
+        {/* Main Content */}
         <main className="flex-1 overflow-y-auto bg-white dark:bg-[#0f172a] p-8 lg:p-12">
           <div className="max-w-4xl mx-auto space-y-8">
             <header className="space-y-2">
               <h2 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Practice Papers</h2>
-              <p className="text-slate-500 dark:text-slate-400 text-base font-medium">Archive of exam-style questions and official materials.</p>
+              <p className="text-slate-500 dark:text-slate-400 text-base font-medium">Curated exam-style questions organized for your revision.</p>
             </header>
 
-            {/* Horizontal Paper Type Tabs */}
+            {/* Paper Type Chips */}
             <div className="flex flex-wrap gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
               {PAPER_TYPES.map((type) => (
                 <button
@@ -162,26 +168,37 @@ export default function PracticePapersPage() {
               ))}
             </div>
 
-            {/* Paper Grid */}
+            {/* Content Display */}
             {loading ? (
               <div className="flex items-center gap-3 text-blue-500 font-bold py-10">
-                <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                Loading resources...
+                <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                Syncing with archive...
               </div>
             ) : filtered.length === 0 ? (
-              <div className="text-center py-20 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
+              <div className="text-center py-20 bg-slate-50 dark:bg-slate-900/50 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
                 <p className="font-bold text-slate-400">No {selectedType === 'All Types' ? '' : selectedType} found for this subject.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 {filtered.map(paper => (
-                  <div key={paper.id} className="group flex flex-col bg-white dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm hover:shadow-xl hover:border-blue-500 transition-all duration-300">
+                  <div 
+                    key={paper.id} 
+                    className="group flex flex-col bg-white dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm hover:shadow-xl hover:border-blue-500 transition-all duration-300"
+                  >
                     <div className="mb-6">
-                      <p className="text-[10px] uppercase tracking-widest text-blue-600 dark:text-blue-400 font-black mb-3">{paper.subject}</p>
-                      <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight mb-4">{paper.title}</h3>
+                      <p className="text-[10px] uppercase tracking-widest text-blue-600 dark:text-blue-400 font-black mb-3">
+                        {paper.subject}
+                      </p>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight mb-4">
+                        {paper.title}
+                      </h3>
                       <div className="flex gap-2">
-                        <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-500 px-2.5 py-1 rounded-lg">{paper.year}</span>
-                        <span className="text-[10px] font-black bg-blue-50 dark:bg-blue-500/10 text-blue-600 px-2.5 py-1 rounded-lg">{paper.paper_type}</span>
+                        <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-500 px-2.5 py-1 rounded-lg">
+                          {paper.year}
+                        </span>
+                        <span className="text-[10px] font-black bg-blue-50 dark:bg-blue-500/10 text-blue-600 px-2.5 py-1 rounded-lg">
+                          {paper.paper_type}
+                        </span>
                       </div>
                     </div>
                     

@@ -1,235 +1,188 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
-const SUBJECTS = [
-  'Mathematics AA', 'Mathematics AI', 'Chemistry', 'Biology', 'Physics',
-  'English Language & Literature', 'English Literature', 'History', 'Economics', 
-  'Psychology', 'Global Politics', 'Theory of Knowledge (TOK)', 
-  'Extended Essay (EE)', 'Computer Science',
-]
+interface Paper {
+  id: string;
+  subject: string;
+  title: string;
+  year: number;
+  paper_type: string;
+  file_url: string;
+  order_index: number;
+}
 
 export default function AdminPage() {
-  const [subject, setSubject] = useState('')
-  const [title, setTitle] = useState('')
-  const [year, setYear] = useState('')
-  const [paperType, setPaperType] = useState('')
-  const [file, setFile] = useState<File | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
-  const [papers, setPapers] = useState<any[]>([]) 
+  const [papers, setPapers] = useState<Paper[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  
   const supabase = createClient()
-
-  const ADMIN_UID = 'c1f4b88e-c5dd-49cd-b72f-1a5d14dab1fe'
-
-  useEffect(() => {
-    const checkAdmin = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || user.id !== ADMIN_UID) {
-        window.location.href = '/'; 
-      }
-    };
-    checkAdmin();
-  }, [supabase]);
+  const router = useRouter()
 
   useEffect(() => {
-    fetchPapers();
-  }, [supabase]);
+    fetchPapers()
+  }, [])
 
   const fetchPapers = async () => {
-    const { data } = await supabase
+    setLoading(true)
+    const { data, error } = await supabase
       .from('past_papers')
       .select('*')
-      .order('order_index', { ascending: true });
+      .order('order_index', { ascending: true })
+
+    if (error) console.error('Error:', error)
+    if (data) setPapers(data as Paper[])
+    setLoading(false)
+  }
+
+  // Moves paper in the local list ONLY
+  const movePaper = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1
+    if (targetIndex < 0 || targetIndex >= papers.length) return
+
+    const newPapers = [...papers]
+    const temp = newPapers[index]
+    newPapers[index] = newPapers[targetIndex]
+    newPapers[targetIndex] = temp
+
+    setPapers(newPapers)
+  }
+
+  // Sends the entire new order to Supabase
+  const saveOrder = async () => {
+    setSaving(true)
     
-    if (data) setPapers(data);
-  };
+    // Create an array of update promises
+    // We use the current array index as the new order_index
+    const updates = papers.map((paper, index) => {
+      return supabase
+        .from('past_papers')
+        .update({ order_index: index })
+        .eq('id', paper.id)
+    })
 
-  // --- REPROVED ROBUST SWAP LOGIC ---
-  const movePaper = async (index: number, direction: 'up' | 'down') => {
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    const results = await Promise.all(updates)
+    const errors = results.filter(r => r.error)
+
+    if (errors.length > 0) {
+      alert("Error saving some changes. Please try again.")
+      console.error(errors)
+    } else {
+      alert("Order saved successfully! Students will see the new order now.")
+    }
     
-    // Safety check: Don't move out of bounds
-    if (targetIndex < 0 || targetIndex >= papers.length) return;
+    setSaving(false)
+    fetchPapers() // Refresh from DB to confirm
+  }
 
-    setLoading(true);
-
-    const currentPaper = papers[index];
-    const targetPaper = papers[targetIndex];
-
-    // Swap the database values
-    const { error: err1 } = await supabase
-      .from('past_papers')
-      .update({ order_index: targetPaper.order_index })
-      .eq('id', currentPaper.id);
-
-    const { error: err2 } = await supabase
-      .from('past_papers')
-      .update({ order_index: currentPaper.order_index })
-      .eq('id', targetPaper.id);
-
-    if (err1 || err2) {
-      alert("Error updating order in database.");
-    } else {
-      // Update local state instantly so the UI reflects the change
-      const updatedPapers = [...papers];
-      // Swap the objects in the array
-      [updatedPapers[index], updatedPapers[targetIndex]] = [updatedPapers[targetIndex], updatedPapers[index]];
-      setPapers(updatedPapers);
-    }
-    setLoading(false);
-  };
-
-  const deletePaper = async (id: string, fileUrl: string) => {
-    const confirmed = window.confirm("Are you sure?");
-    if (!confirmed) return;
-    try {
-      const fileName = fileUrl.split('/').pop();
-      if (fileName) await supabase.storage.from('past-papers').remove([decodeURIComponent(fileName)]);
-      await supabase.from('past_papers').delete().eq('id', id);
-      setPapers(prev => prev.filter(paper => paper.id !== id));
-    } catch (error) {
-      alert("Delete failed.");
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!subject || !title || !file) {
-      setMessage('Fill all fields.'); return;
-    }
-    setLoading(true);
-    setMessage('');
-
-    // Ensure new papers go to the very bottom
-    const maxIndex = papers.length > 0 ? Math.max(...papers.map(p => p.order_index || 0)) : 0;
-    const nextIndex = maxIndex + 1;
-
-    const fileName = `${subject}/${Date.now()}_${file.name}`;
-    const { error: uploadError } = await supabase.storage.from('past-papers').upload(fileName, file);
-
-    if (uploadError) {
-      setMessage('Upload failed'); setLoading(false); return;
-    }
-
-    const { data: urlData } = supabase.storage.from('past-papers').getPublicUrl(fileName);
-
-    const { error: dbError } = await supabase.from('past_papers').insert({
-      subject, title, 
-      year: year ? parseInt(year) : null,
-      paper_type: paperType,
-      file_url: urlData.publicUrl,
-      order_index: nextIndex
-    });
-
-    if (dbError) {
-      setMessage('DB error: ' + dbError.message);
-    } else {
-      setMessage('✅ Uploaded!');
-      fetchPapers(); // Refresh the whole list
-      setTitle(''); setYear(''); setPaperType(''); setFile(null);
-    }
-    setLoading(false);
+  const deletePaper = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this paper?')) return
+    
+    const { error } = await supabase.from('past_papers').delete().eq('id', id)
+    if (error) alert(error.message)
+    else fetchPapers()
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 text-slate-900">
-      <div className="max-w-2xl mx-auto space-y-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] p-8">
+      <div className="max-w-5xl mx-auto">
         
-        {/* --- UPLOAD FORM --- */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-8 space-y-5 shadow-sm">
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">Upload New Paper</h1>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Subject</label>
-              <select value={subject} onChange={e => setSubject(e.target.value)} 
-                className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm bg-slate-50 text-slate-900 focus:border-blue-500 outline-none transition-all">
-                <option value="">Select subject...</option>
-                {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Title</label>
-              <input type="text" placeholder="e.g. Analysis and Approaches SL P1" value={title} onChange={e => setTitle(e.target.value)} 
-                className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm bg-slate-50 text-slate-900 placeholder-slate-400 focus:border-blue-500 outline-none transition-all" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Year</label>
-                <input type="number" placeholder="2024" value={year} onChange={e => setYear(e.target.value)} 
-                  className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm bg-slate-50 text-slate-900 outline-none focus:border-blue-500" />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Type</label>
-                <input type="text" placeholder="Paper 1" value={paperType} onChange={e => setPaperType(e.target.value)} 
-                  className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm bg-slate-50 text-slate-900 outline-none focus:border-blue-500" />
-              </div>
-            </div>
-
-            <div className="pt-2">
-              <input type="file" accept=".pdf" onChange={e => setFile(e.target.files?.[0] || null)} 
-                className="text-xs block w-full text-slate-500 file:mr-4 file:py-2.5 file:px-6 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition-all cursor-pointer" />
-            </div>
+        <div className="flex justify-between items-center mb-10">
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white">Admin Dashboard</h1>
+            <p className="text-slate-500">Manage your past papers and their display order.</p>
           </div>
-
-          <button onClick={handleUpload} disabled={loading} 
-            className="w-full bg-slate-900 text-white rounded-xl py-4 text-sm font-bold shadow-lg active:scale-[0.98] transition-all disabled:opacity-50">
-            {loading ? 'Processing...' : 'Upload Paper'}
-          </button>
           
-          {message && <p className={`text-center text-xs font-bold ${message.includes('✅') ? 'text-green-600' : 'text-red-600'}`}>{message}</p>}
+          <div className="flex gap-4">
+             <button 
+                onClick={() => router.push('/admin/upload')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold transition shadow-lg shadow-blue-500/20"
+              >
+                + Upload New
+              </button>
+              
+              <button 
+                onClick={saveOrder}
+                disabled={saving || loading}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl font-bold transition shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+              >
+                {saving ? 'Saving Order...' : 'Save Changes'}
+              </button>
+          </div>
         </div>
 
-        {/* --- MANAGE SECTION --- */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-bold text-slate-900 px-1">Manage & Reorder</h2>
-          
-          {papers.length === 0 ? (
-            <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center text-slate-400 font-medium">
-              No papers found. Upload one to start.
-            </div>
-          ) : (
-            papers.map((paper, index) => (
-              <div key={paper.id} className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-6 shadow-sm group hover:border-blue-300 transition-all">
-                
-                {/* Reorder Controls */}
-                <div className="flex flex-col gap-2">
-                  <button 
-                    disabled={index === 0 || loading}
-                    onClick={() => movePaper(index, 'up')}
-                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-900 disabled:opacity-10 transition-colors"
-                  >
-                    <span className="text-base font-bold">▲</span>
-                  </button>
-                  <button 
-                    disabled={index === papers.length - 1 || loading}
-                    onClick={() => movePaper(index, 'down')}
-                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-900 disabled:opacity-10 transition-colors"
-                  >
-                    <span className="text-base font-bold">▼</span>
-                  </button>
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-slate-900 truncate">{paper.title}</p>
-                  <div className="flex gap-2 mt-1">
-                    <span className="text-[10px] font-black uppercase tracking-tighter text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{paper.subject}</span>
-                    <span className="text-[10px] font-black text-slate-400 px-2 py-0.5 bg-slate-50 rounded">{paper.year}</span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => deletePaper(paper.id, paper.file_url)}
-                  className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-red-600 hover:text-white transition-all shadow-sm"
-                >
-                  Delete
-                </button>
-              </div>
-            ))
-          )}
-        </div>
+        {loading ? (
+          <div className="text-center py-20 text-slate-400 font-bold animate-pulse">Loading Archive...</div>
+        ) : (
+          <div className="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Order</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Details</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Type</th>
+                  <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {papers.map((paper, index) => (
+                  <tr key={paper.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-1">
+                        <button 
+                          onClick={() => movePaper(index, 'up')}
+                          disabled={index === 0}
+                          className="text-slate-400 hover:text-blue-500 disabled:opacity-10 transition"
+                        >
+                          ▲
+                        </button>
+                        <span className="text-center font-bold text-xs text-slate-300">{index + 1}</span>
+                        <button 
+                          onClick={() => movePaper(index, 'down')}
+                          disabled={index === papers.length - 1}
+                          className="text-slate-400 hover:text-blue-500 disabled:opacity-10 transition"
+                        >
+                          ▼
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase mb-1">{paper.subject}</p>
+                      <p className="font-bold text-slate-900 dark:text-white">{paper.title}</p>
+                      <p className="text-xs text-slate-400">{paper.year}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                       <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">
+                         {paper.paper_type}
+                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <a 
+                          href={paper.file_url} 
+                          target="_blank" 
+                          className="p-2 text-slate-400 hover:text-blue-500 transition"
+                          title="View File"
+                        >
+                          👁️
+                        </a>
+                        <button 
+                          onClick={() => deletePaper(paper.id)}
+                          className="p-2 text-slate-400 hover:text-red-500 transition"
+                          title="Delete"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )
