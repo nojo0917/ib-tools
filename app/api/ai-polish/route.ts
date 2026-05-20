@@ -34,19 +34,24 @@ export async function POST(req: NextRequest) {
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+        'X-Title': 'IB Study Tools',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-lite-preview-02-05:free',
+        model: 'openai/gpt-oss-120b:free', // Reverted to your working model
         messages: [
-          { role: 'system', content: `${stylePrompt} Return only the corrected text. Do not add any conversational filler or quotes.` },
+          { 
+            role: 'system', 
+            content: `${stylePrompt} Return only the corrected text. Do not add any conversational filler, introductory remarks, or quotes.` 
+          },
           { role: 'user', content: text },
         ],
+        temperature: 0.4,
       }),
     })
 
     const data = await aiResponse.json()
     
-    // OpenRouter errors usually live in data.error.message or data.error
+    // Check for OpenRouter specific errors
     if (!aiResponse.ok || data.error) {
       const errorMsg = data.error?.message || data.error || 'OpenRouter Error'
       console.error('AI Error:', errorMsg)
