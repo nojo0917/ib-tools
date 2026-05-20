@@ -11,7 +11,8 @@ const SUBJECTS = [
   'Extended Essay (EE)', 'Computer Science',
 ]
 
-const PAPER_TYPES = ['All Types', 'Paper 1', 'Paper 2', 'Paper 3', 'Markscheme', 'Specimen']
+// UPDATED: Removed 'Markscheme' from the array
+const PAPER_TYPES = ['All Types', 'Paper 1', 'Paper 2', 'Paper 3', 'Specimen']
 
 interface Paper {
   id: string; 
