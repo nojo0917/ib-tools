@@ -6,11 +6,15 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return new Response(JSON.stringify({ output: 'Please login again' }), { status: 401 })
+    
+    if (!user) {
+      return new Response(JSON.stringify({ output: 'Please login again' }), { status: 401 })
+    }
 
-    // Basic rate limit check
     const { success } = await checkRateLimit(user.id, 'ai-polish')
-    if (!success) return new Response(JSON.stringify({ output: 'Rate limit exceeded' }), { status: 429 })
+    if (!success) {
+      return new Response(JSON.stringify({ output: 'Rate limit exceeded. Try again later.' }), { status: 429 })
+    }
 
     const { text, style } = await req.json()
 
@@ -24,17 +28,17 @@ export async function POST(req: NextRequest) {
 
     const stylePrompt = POLISH_PROMPTS[style] || POLISH_PROMPTS['Standard']
 
-    // Direct fetch to OpenRouter
     const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
       },
       body: JSON.stringify({
         model: 'google/gemini-2.0-flash-lite-preview-02-05:free',
         messages: [
-          { role: 'system', content: `${stylePrompt} Return only the corrected text.` },
+          { role: 'system', content: `${stylePrompt} Return only the corrected text. Do not add any conversational filler or quotes.` },
           { role: 'user', content: text },
         ],
       }),
@@ -42,10 +46,11 @@ export async function POST(req: NextRequest) {
 
     const data = await aiResponse.json()
     
-    // Log this to your terminal so you can see the error!
-    if (data.error) {
-      console.error('OpenRouter API Error:', data.error)
-      return new Response(JSON.stringify({ output: `API Error: ${data.error.message}` }), { status: 500 })
+    // OpenRouter errors usually live in data.error.message or data.error
+    if (!aiResponse.ok || data.error) {
+      const errorMsg = data.error?.message || data.error || 'OpenRouter Error'
+      console.error('AI Error:', errorMsg)
+      return new Response(JSON.stringify({ output: `AI Error: ${errorMsg}` }), { status: 500 })
     }
 
     const output = data.choices?.[0]?.message?.content || 'No response from AI.'
@@ -53,6 +58,6 @@ export async function POST(req: NextRequest) {
 
   } catch (err: any) {
     console.error('Polish Route Error:', err)
-    return new Response(JSON.stringify({ output: 'Server Error. Check your console.' }), { status: 500 })
+    return new Response(JSON.stringify({ output: 'Internal Server Error' }), { status: 500 })
   }
 }
