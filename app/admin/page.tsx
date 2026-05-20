@@ -45,25 +45,38 @@ export default function AdminPage() {
     if (data) setPapers(data);
   };
 
+  // --- REPROVED ROBUST SWAP LOGIC ---
   const movePaper = async (index: number, direction: 'up' | 'down') => {
-    const paperToMove = papers[index];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    const paperToSwapWith = papers[targetIndex];
-
-    if (!paperToSwapWith) return;
+    
+    // Safety check: Don't move out of bounds
+    if (targetIndex < 0 || targetIndex >= papers.length) return;
 
     setLoading(true);
+
+    const currentPaper = papers[index];
+    const targetPaper = papers[targetIndex];
+
+    // Swap the database values
     const { error: err1 } = await supabase
       .from('past_papers')
-      .update({ order_index: paperToSwapWith.order_index })
-      .eq('id', paperToMove.id);
+      .update({ order_index: targetPaper.order_index })
+      .eq('id', currentPaper.id);
 
     const { error: err2 } = await supabase
       .from('past_papers')
-      .update({ order_index: paperToMove.order_index })
-      .eq('id', paperToSwapWith.id);
+      .update({ order_index: currentPaper.order_index })
+      .eq('id', targetPaper.id);
 
-    if (!err1 && !err2) await fetchPapers();
+    if (err1 || err2) {
+      alert("Error updating order in database.");
+    } else {
+      // Update local state instantly so the UI reflects the change
+      const updatedPapers = [...papers];
+      // Swap the objects in the array
+      [updatedPapers[index], updatedPapers[targetIndex]] = [updatedPapers[targetIndex], updatedPapers[index]];
+      setPapers(updatedPapers);
+    }
     setLoading(false);
   };
 
@@ -87,7 +100,10 @@ export default function AdminPage() {
     setLoading(true);
     setMessage('');
 
-    const nextIndex = papers.length > 0 ? Math.max(...papers.map(p => p.order_index || 0)) + 1 : 0;
+    // Ensure new papers go to the very bottom
+    const maxIndex = papers.length > 0 ? Math.max(...papers.map(p => p.order_index || 0)) : 0;
+    const nextIndex = maxIndex + 1;
+
     const fileName = `${subject}/${Date.now()}_${file.name}`;
     const { error: uploadError } = await supabase.storage.from('past-papers').upload(fileName, file);
 
@@ -109,7 +125,7 @@ export default function AdminPage() {
       setMessage('DB error: ' + dbError.message);
     } else {
       setMessage('✅ Uploaded!');
-      fetchPapers();
+      fetchPapers(); // Refresh the whole list
       setTitle(''); setYear(''); setPaperType(''); setFile(null);
     }
     setLoading(false);
