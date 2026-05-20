@@ -82,11 +82,11 @@ export default function HomePage() {
               cta: 'Check text'
             },
             { 
-              title: 'Humanize', 
-              emoji: '🪄', 
-              desc: 'Rewrite AI text to sound natural and genuine. Choose from 5 different writing styles.',
-              link: '/humanize',
-              cta: 'Rewrite text'
+              title: 'AI Polish', 
+              emoji: '✨', 
+              desc: 'Grammarly-style proofreader. Fixes grammar and sentence structure while preserving your original voice.',
+              link: '/ai-polish', // Updated link to match renamed folder
+              cta: 'Polish text'
             },
             { 
               title: 'Practice Papers', 

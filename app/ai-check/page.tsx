@@ -13,11 +13,12 @@ export default function AICheckPage() {
   const pathname = usePathname()
   const supabase = createClient()
 
+  // Updated navigation to match the new "AI Polish" branding
   const navLinks = [
     { name: 'Home', href: '/home' },
     { name: 'Generate', href: '/generate' },
     { name: 'AI Check', href: '/ai-check' },
-    { name: 'Humanize', href: '/humanize' },
+    { name: 'AI Polish', href: '/ai-polish' }, 
     { name: 'Practice Papers', href: '/practice-papers' },
   ]
 
@@ -70,7 +71,6 @@ export default function AICheckPage() {
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
-            {/* MATCHING SPACER: shrink-0 ensures the logo position is identical across all tools */}
             <div className="w-14 shrink-0" aria-hidden="true" />
             
             <Link href="/home">
@@ -118,7 +118,7 @@ export default function AICheckPage() {
           <header className="space-y-2">
             <h2 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">AI Check</h2>
             <p className="text-slate-500 dark:text-slate-400 text-base font-medium">
-              Paste text to check if it was AI-generated. Results come from two independent detectors.
+              Analyze patterns to see if text was likely written by AI.
             </p>
           </header>
 

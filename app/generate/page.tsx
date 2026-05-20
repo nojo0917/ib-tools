@@ -34,18 +34,18 @@ export default function GeneratePage() {
   const [started, setStarted] = useState(false)
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   
-  // Ref to track the current abort controller
   const abortControllerRef = useRef<AbortController | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
 
+  // Updated name to "AI Polish" to match your new branding
   const navLinks = [
     { name: 'Home', href: '/home' },
     { name: 'Generate', href: '/generate' },
     { name: 'AI Check', href: '/ai-check' },
-    { name: 'Humanize', href: '/humanize' },
+    { name: 'AI Polish', href: '/ai-polish' }, 
     { name: 'Practice Papers', href: '/practice-papers' },
   ]
 
@@ -63,11 +63,10 @@ export default function GeneratePage() {
   }
 
   const handleNew = () => {
-    handleStop() // Stop any active generation
+    handleStop()
     setSubject(''); setTaskType(''); setMessages([]); setInput(''); setError(''); setStarted(false); setCurrentChatId(null)
   }
 
-  // --- STOP FUNCTION ---
   const handleStop = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
@@ -101,7 +100,6 @@ export default function GeneratePage() {
       setError('Select subject and task type'); return
     }
 
-    // Initialize AbortController
     const controller = new AbortController()
     abortControllerRef.current = controller
 
@@ -137,7 +135,7 @@ export default function GeneratePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subject, taskType, prompt: currentInput, messages: messagesForAPI }),
-        signal: controller.signal // Link the abort signal to the fetch
+        signal: controller.signal
       })
 
       if (!res.ok) throw new Error('Stream error');
@@ -216,10 +214,11 @@ export default function GeneratePage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors">
       
-      {/* --- NAVBAR --- */}
+      {/* --- NAVBAR (Fixed to match exact style) --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
+            {/* Sidebar Toggle Button Container */}
             <div className="w-14 shrink-0 flex items-center"> 
                 <button 
                     onClick={() => setSidebarOpen(!sidebarOpen)} 
@@ -230,6 +229,7 @@ export default function GeneratePage() {
                   </span>
                 </button>
             </div>
+            
             <Link href="/home">
               <span className="text-xl font-bold text-blue-600 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
                 IB Study Tools
@@ -238,18 +238,32 @@ export default function GeneratePage() {
           </div>
 
           <div className="hidden md:flex items-center gap-1 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl p-1">
-            {navLinks.map((link) => (
-                <Link key={link.href} href={link.href} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${pathname === link.href ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}>
+            {navLinks.map((link) => {
+              const isActive = pathname === link.href;
+              return (
+                <Link 
+                  key={link.href} 
+                  href={link.href} 
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                    isActive 
+                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' 
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
                   {link.name}
                 </Link>
-            ))}
+              );
+            })}
           </div>
 
-          <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-red-500 transition">Logout</button>
+          <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-red-500 transition">
+            Logout
+          </button>
         </div>
       </nav>
 
       <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar and Main content remains the same... */}
         {sidebarOpen && (
           <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0">
             <div className="p-4">
@@ -303,7 +317,6 @@ export default function GeneratePage() {
               {loading && (
                 <div className="flex items-center gap-3">
                   <div className="text-xs font-bold text-blue-500 animate-pulse px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-full w-fit">Tutor is drafting...</div>
-                  {/* STOP BUTTON NEXT TO LOADING */}
                   <button 
                     onClick={handleStop}
                     className="text-[10px] bg-red-50 dark:bg-red-900/20 text-red-500 font-black uppercase tracking-tighter px-3 py-1.5 rounded-lg border border-red-100 dark:border-red-900/50 hover:bg-red-500 hover:text-white transition-all"

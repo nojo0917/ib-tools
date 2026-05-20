@@ -11,7 +11,6 @@ const SUBJECTS = [
   'Extended Essay (EE)', 'Computer Science',
 ]
 
-// UPDATED: Removed 'Markscheme' from the array
 const PAPER_TYPES = ['All Types', 'Paper 1', 'Paper 2', 'Paper 3', 'Specimen']
 
 interface Paper {
@@ -20,8 +19,8 @@ interface Paper {
   title: string; 
   year: number;
   paper_type: string; 
-  file_url: string;          // Official Save My Exams Link
-  model_answer_url: string;   // Your AI Response Link
+  file_url: string;          
+  model_answer_url: string;   
   order_index: number;
 }
 
@@ -37,11 +36,12 @@ export default function PracticePapersPage() {
   const pathname = usePathname()
   const supabase = createClient()
 
+  // Updated navigation to match the new "AI Polish" branding
   const navLinks = [
     { name: 'Home', href: '/home' },
     { name: 'Generate', href: '/generate' },
     { name: 'AI Check', href: '/ai-check' },
-    { name: 'Humanize', href: '/humanize' },
+    { name: 'AI Polish', href: '/ai-polish' }, 
     { name: 'Practice Papers', href: '/practice-papers' },
   ]
 
@@ -79,6 +79,7 @@ export default function PracticePapersPage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300">
       
+      {/* --- NAVBAR --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
@@ -100,15 +101,22 @@ export default function PracticePapersPage() {
           </div>
 
           <div className="hidden md:flex items-center gap-1 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl p-1">
-            {navLinks.map((link) => (
+            {navLinks.map((link) => {
+              const isActive = pathname === link.href;
+              return (
                 <Link 
                   key={link.href} 
                   href={link.href} 
-                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${pathname === link.href ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                    isActive 
+                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' 
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
                 >
                   {link.name}
                 </Link>
-            ))}
+              );
+            })}
           </div>
 
           <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-red-500 transition">Logout</button>
