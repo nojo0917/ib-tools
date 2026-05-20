@@ -14,8 +14,13 @@ const SUBJECTS = [
 const PAPER_TYPES = ['All Types', 'Paper 1', 'Paper 2', 'Paper 3', 'Markscheme', 'Specimen']
 
 interface Paper {
-  id: string; subject: string; title: string; year: number;
-  paper_type: string; file_url: string; order_index: number;
+  id: string; 
+  subject: string; 
+  title: string; 
+  year: number;
+  paper_type: string; 
+  file_url: string; 
+  order_index: number;
 }
 
 export default function PracticePapersPage() {
@@ -38,39 +43,50 @@ export default function PracticePapersPage() {
     { name: 'Practice Papers', href: '/practice-papers' },
   ]
 
-  useEffect(() => { loadPapers() }, [])
-
-  useEffect(() => {
-    let result = papers
-    if (subject !== 'All Subjects') {
-      result = result.filter(p => p.subject === subject)
-    }
-    if (selectedType !== 'All Types') {
-      result = result.filter(p => p.paper_type === selectedType)
-    }
-    setFiltered(result)
-  }, [subject, selectedType, papers])
-
+  // 1. Fixed the data fetching logic
   const loadPapers = async () => {
-    // UPDATED: Now sorts by your custom order_index first, then year
-    const { data } = await supabase
+    setLoading(true);
+    const { data, error } = await supabase
       .from('past_papers')
       .select('*')
       .order('order_index', { ascending: true })
-      .order('year', { ascending: false })
+      .order('year', { ascending: false });
       
-    if (data) { setPapers(data); setFiltered(data); }
-    setLoading(false)
+    if (error) {
+      console.error("Error loading papers:", error.message);
+    } else if (data) { 
+      setPapers(data as Paper[]); 
+      setFiltered(data as Paper[]); 
+    }
+    setLoading(false);
   }
 
+  // 2. Initial Load
+  useEffect(() => { 
+    loadPapers();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 3. Filter Logic
+  useEffect(() => {
+    let result = [...papers]; // Create a copy to avoid mutation
+    if (subject !== 'All Subjects') {
+      result = result.filter(p => p.subject === subject);
+    }
+    if (selectedType !== 'All Types') {
+      result = result.filter(p => p.paper_type === selectedType);
+    }
+    setFiltered(result);
+  }, [subject, selectedType, papers]);
+
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/login')
+    await supabase.auth.signOut();
+    router.replace('/login'); // Use replace instead of push for auth
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300">
       
+      {/* Navigation */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
@@ -101,6 +117,7 @@ export default function PracticePapersPage() {
       </nav>
 
       <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
         {sidebarOpen && (
           <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0">
             <div className="p-6 space-y-6">
@@ -109,7 +126,7 @@ export default function PracticePapersPage() {
                 <select
                   value={subject}
                   onChange={e => setSubject(e.target.value)}
-                  className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm bg-white dark:bg-slate-900/50 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all shadow-sm"
+                  className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all shadow-sm"
                 >
                   {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -118,6 +135,7 @@ export default function PracticePapersPage() {
           </aside>
         )}
 
+        {/* Main Content */}
         <main className="flex-1 overflow-y-auto bg-white dark:bg-[#0f172a] p-8 lg:p-12">
           <div className="max-w-4xl mx-auto space-y-8">
             <header className="space-y-2">
@@ -125,6 +143,7 @@ export default function PracticePapersPage() {
               <p className="text-slate-500 dark:text-slate-400 text-base font-medium">Archive of exam-style questions and official materials.</p>
             </header>
 
+            {/* Type Filter Buttons */}
             <div className="flex flex-wrap gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
               {PAPER_TYPES.map((type) => (
                 <button
@@ -142,7 +161,9 @@ export default function PracticePapersPage() {
             </div>
 
             {loading ? (
-              <div className="animate-pulse flex items-center gap-2 text-blue-500 font-bold">📄 Loading papers...</div>
+              <div className="flex items-center gap-2 text-blue-500 font-bold py-10">
+                <span className="animate-spin">🌀</span> Loading papers...
+              </div>
             ) : filtered.length === 0 ? (
               <div className="text-center py-20 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
                 <p className="font-bold text-slate-400">No {selectedType === 'All Types' ? '' : selectedType} found for this subject.</p>
@@ -160,7 +181,7 @@ export default function PracticePapersPage() {
                       </div>
                     </div>
                     <div className="flex gap-3 mt-auto">
-                      <a href={paper.file_url} target="_blank" rel="noopener noreferrer" className="flex-1 text-center text-xs font-bold bg-slate-100 dark:bg-slate-800 rounded-xl py-3 hover:bg-slate-200 transition">View</a>
+                      <a href={paper.file_url} target="_blank" rel="noopener noreferrer" className="flex-1 text-center text-xs font-bold bg-slate-100 dark:bg-slate-800 dark:text-white rounded-xl py-3 hover:bg-slate-200 dark:hover:bg-slate-700 transition">View</a>
                       <a href={paper.file_url} download className="flex-1 text-center text-xs font-bold bg-blue-600 text-white rounded-xl py-3 hover:bg-blue-700 transition shadow-lg shadow-blue-500/20">Download</a>
                     </div>
                   </div>
