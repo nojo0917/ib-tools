@@ -1,27 +1,40 @@
 import { NextResponse } from 'next/server';
 
+// Edge runtime is perfect for streaming and global low-latency
 export const runtime = 'edge'; 
 
 export async function POST(req: Request) {
   try {
     const { messages, fileData } = await req.json();
 
-    // 1. Prepare the messages for the AI
-    // We take the last message (the user's prompt) and turn it into a content array if there's an image
+    // Reconstruct messages to handle different file types (Vision vs Text)
     const processedMessages = messages.map((msg: any, index: number) => {
+      // Only attach the file to the VERY LAST message from the user
       if (index === messages.length - 1 && fileData) {
-        return {
-          role: "user",
-          content: [
-            { type: "text", text: msg.content },
-            {
-              type: "image_url",
-              image_url: {
-                url: fileData, // The Base64 string from the frontend
+        
+        // CASE 1: The file is an image (Base64)
+        if (fileData.startsWith('data:image')) {
+          return {
+            role: "user",
+            content: [
+              { type: "text", text: msg.content || "Analyze this image for me." },
+              {
+                type: "image_url",
+                image_url: {
+                  url: fileData, // The Base64 string
+                },
               },
-            },
-          ],
-        };
+            ],
+          };
+        } 
+        
+        // CASE 2: The file is a PDF (Plain Text from the frontend)
+        else {
+          return {
+            role: "user",
+            content: `${msg.content}\n\n[ATTACHED DOCUMENT CONTENT]:\n${fileData}`,
+          };
+        }
       }
       return msg;
     });
@@ -35,7 +48,7 @@ export async function POST(req: Request) {
         "X-Title": "IB Study Tools",
       },
       body: JSON.stringify({
-        // SWITCHED TO A VISION MODEL: Gemini Flash is free/cheap and great at screenshots
+        // Gemini 1.5 Flash 8B is the best "bang for buck" for OCR and screenshots
         model: "google/gemini-flash-1.5-8b", 
         messages: processedMessages,
         stream: true,
@@ -50,6 +63,7 @@ export async function POST(req: Request) {
       return new NextResponse(errorText, { status: response.status });
     }
 
+    // Return the raw stream directly to the frontend
     return new NextResponse(response.body, {
       headers: {
         'Content-Type': 'text/event-stream',
