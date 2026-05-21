@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Paperclip, X, Image as ImageIcon } from 'lucide-react'
+import { Paperclip, X, Image as ImageIcon, FileText } from 'lucide-react'
 
 const SUBJECTS = [
   'Mathematics AA', 'Mathematics AI', 'Chemistry', 'Biology', 'Physics',
@@ -34,8 +34,6 @@ export default function GeneratePage() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [started, setStarted] = useState(false)
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
-  
-  // New State for File Uploads
   const [attachedFile, setAttachedFile] = useState<{ name: string; data: string; type: string } | null>(null)
   
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -54,7 +52,17 @@ export default function GeneratePage() {
   ]
 
   useEffect(() => { loadHistory() }, [])
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+
+  // FIXED AUTO-SCROLL: 
+  // It only scrolls if the last message is from the user OR if we are currently loading (AI streaming)
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === 'user' || loading) {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, [messages, loading]);
 
   const loadHistory = async () => {
     const { data } = await supabase.from('generations').select('*').eq('tool', 'generate').order('created_at', { ascending: false }).limit(50)
@@ -79,26 +87,37 @@ export default function GeneratePage() {
     }
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // Vercel limit is ~4.5MB total request size
+  // Unified File Processor for Click & Drag
+  const processFile = (file: File) => {
     if (file.size > 4 * 1024 * 1024) {
-      alert("File is too large. Please keep screenshots under 4MB.")
-      return
+      alert("File is too large. Please keep under 4MB.");
+      return;
     }
 
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      setAttachedFile({
-        name: file.name,
-        type: file.type,
-        data: event.target?.result as string,
-      })
+    const reader = new FileReader();
+    if (file.type === "application/pdf") {
+      reader.onload = (e) => {
+        setAttachedFile({ name: file.name, type: 'pdf', data: e.target?.result as string });
+      };
+      reader.readAsText(file);
+    } else {
+      reader.onload = (e) => {
+        setAttachedFile({ name: file.name, type: 'image', data: e.target?.result as string });
+      };
+      reader.readAsDataURL(file);
     }
-    reader.readAsDataURL(file)
-  }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
+  };
 
   const loadGeneration = (gen: Generation) => {
     handleStop()
@@ -132,29 +151,12 @@ export default function GeneratePage() {
     const currentFile = attachedFile; 
     const userMessage: Message = { 
         role: 'user', 
-        content: currentFile ? `[Attached Image: ${currentFile.name}] ${currentInput}` : currentInput 
+        content: currentFile ? `[File: ${currentFile.name}] ${currentInput}` : currentInput 
     }
     
-    const systemPrompt: Message = {
-        role: 'system',
-        content: `You are an expert IB Tutor for ${subject}. The student is asking for help with a ${taskType}. 
-        If an image is provided, analyze it carefully (it's likely a textbook, problem, or handwritten notes). 
-        STRICT RULES:
-        1. Be extremely concise. Avoid long introductions.
-        2. Use bullet points where possible.
-        3. Do not exceed 300 words.
-        4. Focus purely on high-mark IB criteria.`
-    };
-
-    const messagesForAPI = [
-        systemPrompt,
-        ...messages.map(m => ({ role: m.role, content: m.content })),
-        userMessage
-    ];
-
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setAttachedFile(null); // Clear file after sending
+    setAttachedFile(null);
     setLoading(true);
     setStarted(true);
     setError('');
@@ -167,8 +169,8 @@ export default function GeneratePage() {
             subject, 
             taskType, 
             prompt: currentInput, 
-            messages: messagesForAPI,
-            fileData: currentFile?.data // Send Base64 data to backend
+            messages: [...messages, userMessage],
+            fileData: currentFile?.data 
         }),
         signal: controller.signal
       })
@@ -178,15 +180,12 @@ export default function GeneratePage() {
       const reader = res.body?.getReader(); 
       const decoder = new TextDecoder(); 
       let fullOutput = ''
-      
       setMessages(prev => [...prev, { role: 'assistant', content: '' }])
 
       let leftover = ''; 
-
       while (reader) {
         const { done, value } = await reader.read(); 
         if (done) break
-        
         const chunk = decoder.decode(value, { stream: true })
         const lines = (leftover + chunk).split('\n');
         leftover = lines.pop() || '';
@@ -194,10 +193,8 @@ export default function GeneratePage() {
         for (const line of lines) {
           const trimmedLine = line.trim();
           if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue;
-          
           const data = trimmedLine.replace('data: ', '');
           if (data === '[DONE]') break;
-          
           try {
             const parsed = JSON.parse(data);
             const text = parsed.choices?.[0]?.delta?.content || '';
@@ -209,37 +206,27 @@ export default function GeneratePage() {
                 return updated;
               });
             }
-          } catch (e) {
-             leftover = line;
-          }
+          } catch (e) { leftover = line; }
         }
       }
 
+      // Save to Supabase logic...
       const { data: { user } } = await supabase.auth.getUser()
       if (user && fullOutput) {
-        const finalChatHistory = [...messages, userMessage, { role: 'assistant', content: fullOutput }].filter(m => m.role !== 'system');
-        
+        const finalChatHistory = [...messages, userMessage, { role: 'assistant', content: fullOutput }];
         if (currentChatId) {
           await supabase.from('generations').update({ output: JSON.stringify(finalChatHistory) }).eq('id', currentChatId)
         } else {
           const { data } = await supabase.from('generations').insert({ 
-            user_id: user.id, 
-            tool: 'generate', 
-            subject, 
-            task_type: taskType, 
-            input: currentInput, 
-            output: JSON.stringify(finalChatHistory) 
+            user_id: user.id, tool: 'generate', subject, task_type: taskType, 
+            input: currentInput, output: JSON.stringify(finalChatHistory) 
           }).select().single()
           if (data) setCurrentChatId(data.id)
         }
         loadHistory()
       }
     } catch (err: any) {
-      if (err.name === 'AbortError') {
-        console.log('Generation stopped by user')
-      } else {
-        setError('Connection lost. Please try again.');
-      }
+      if (err.name !== 'AbortError') setError('Connection lost. Please try again.');
     } finally {
       setLoading(false)
       abortControllerRef.current = null
@@ -252,43 +239,21 @@ export default function GeneratePage() {
       {/* NAVBAR */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="w-14 shrink-0 flex items-center"> 
-                <button 
-                    onClick={() => setSidebarOpen(!sidebarOpen)} 
-                    className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                >
-                  <span className={`text-lg font-bold transition-transform duration-300 ${sidebarOpen ? 'rotate-0' : 'rotate-180'}`}>
-                    {sidebarOpen ? '←' : '→'}
-                  </span>
-                </button>
-            </div>
+          <div className="flex items-center gap-4">
+            <button 
+                onClick={() => setSidebarOpen(!sidebarOpen)} 
+                className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+            >
+              <span className={`text-lg font-bold transition-transform duration-300 ${sidebarOpen ? 'rotate-0' : 'rotate-180'}`}>
+                {sidebarOpen ? '←' : '→'}
+              </span>
+            </button>
             <Link href="/home">
               <span className="text-xl font-bold text-blue-600 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
                 IB Study Tools
               </span>
             </Link>
           </div>
-
-          <div className="hidden md:flex items-center gap-1 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl p-1">
-            {navLinks.map((link) => {
-              const isActive = pathname === link.href;
-              return (
-                <Link 
-                  key={link.href} 
-                  href={link.href} 
-                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                    isActive 
-                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' 
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  {link.name}
-                </Link>
-              );
-            })}
-          </div>
-
           <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-red-500 transition">
             Logout
           </button>
@@ -313,20 +278,24 @@ export default function GeneratePage() {
           </aside>
         )}
 
-        <main className="flex-1 flex flex-col relative bg-white dark:bg-[#0f172a]">
+        <main 
+          onDragOver={(e) => e.preventDefault()} 
+          onDrop={onDrop} 
+          className="flex-1 flex flex-col relative bg-white dark:bg-[#0f172a]"
+        >
           {!started && (
             <div className="absolute inset-0 flex items-center justify-center p-6 z-40 bg-white dark:bg-[#0f172a]">
               <div className="max-w-md w-full space-y-8 text-center">
-                <div className="space-y-2">
+                <div className="space-y-2 text-center">
                   <h2 className="text-4xl font-black tracking-tight dark:text-white">Tutor Mode</h2>
                   <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Configure your study session.</p>
                 </div>
                 <div className="grid gap-4">
-                  <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold outline-none dark:text-white">
+                  <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold outline-none">
                     <option value="">Select Subject</option>
                     {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
-                  <select value={taskType} onChange={e => setTaskType(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold outline-none dark:text-white">
+                  <select value={taskType} onChange={e => setTaskType(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-bold outline-none">
                     <option value="">Select Task Type</option>
                     {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
@@ -337,7 +306,7 @@ export default function GeneratePage() {
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-32">
+          <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-40">
             <div className="max-w-4xl mx-auto space-y-8">
               {messages.filter(m => m.role !== 'system').map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -349,64 +318,43 @@ export default function GeneratePage() {
               {loading && (
                 <div className="flex items-center gap-3">
                   <div className="text-xs font-bold text-blue-500 animate-pulse px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-full w-fit">Tutor is drafting...</div>
-                  <button onClick={handleStop} className="text-[10px] bg-red-50 dark:bg-red-900/20 text-red-500 font-black uppercase tracking-tighter px-3 py-1.5 rounded-lg border border-red-100 dark:border-red-900/50 hover:bg-red-500 hover:text-white transition-all">Stop AI</button>
+                  <button onClick={handleStop} className="text-[10px] bg-red-50 dark:bg-red-900/20 text-red-500 font-black uppercase px-3 py-1.5 rounded-lg border border-red-100 hover:bg-red-500 hover:text-white transition-all">Stop AI</button>
                 </div>
               )}
-              <div ref={bottomRef} />
+              <div ref={bottomRef} className="h-4" />
             </div>
           </div>
 
-          {/* INPUT AREA WITH FILE UPLOAD */}
-          <div className="absolute bottom-0 left-0 right-0 p-6 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-xl border-t border-slate-100 dark:border-slate-800 z-30">
+          <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white dark:from-[#0f172a] via-white/80 dark:via-[#0f172a]/80 to-transparent z-30">
             <div className="max-w-4xl mx-auto space-y-3">
-              
-              {/* Image Preview Chip */}
               {attachedFile && (
                 <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl w-fit">
-                    <ImageIcon size={14} className="text-blue-600" />
-                    <span className="text-[10px] font-bold text-blue-600 truncate max-w-[150px] uppercase tracking-wider">{attachedFile.name}</span>
-                    <button onClick={() => setAttachedFile(null)} className="text-blue-400 hover:text-red-500 transition-colors">
-                        <X size={14} />
-                    </button>
+                    {attachedFile.type === 'pdf' ? <FileText size={14} className="text-blue-600" /> : <ImageIcon size={14} className="text-blue-600" />}
+                    <span className="text-[10px] font-bold text-blue-600 truncate max-w-[150px] uppercase">{attachedFile.name}</span>
+                    <button onClick={() => setAttachedFile(null)} className="text-blue-400 hover:text-red-500 transition-colors"><X size={14} /></button>
                 </div>
               )}
 
-              <div className="flex gap-4 items-end bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-2 focus-within:ring-2 focus-within:ring-blue-500/50 transition-all">
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  accept="image/*" 
-                  className="hidden" 
-                />
-                <button 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-3.5 mb-0.5 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl transition-all"
-                  title="Upload Screenshot"
-                >
+              <div className="flex gap-4 items-end bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-2 focus-within:ring-2 focus-within:ring-blue-500/50 transition-all shadow-sm">
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*,.pdf" className="hidden" />
+                <button onClick={() => fileInputRef.current?.click()} className="p-3.5 mb-0.5 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl transition-all">
                   <Paperclip size={20} />
                 </button>
-
                 <textarea 
                   value={input} 
                   onChange={e => setInput(e.target.value)} 
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} 
-                  placeholder={attachedFile ? "Ask a question about this image..." : "Message your tutor..."} 
-                  className="flex-1 bg-transparent border-none p-4 text-sm focus:outline-none resize-none dark:text-white" 
+                  placeholder={attachedFile ? "Ask about this file..." : "Message your tutor..."} 
+                  className="flex-1 bg-transparent border-none p-4 text-sm focus:outline-none resize-none max-h-48" 
                   rows={1} 
                 />
-                
-                {loading ? (
-                  <button onClick={handleStop} className="bg-red-500 text-white rounded-2xl px-6 py-3.5 text-sm font-bold active:scale-95 transition-all">Stop</button>
-                ) : (
-                  <button 
-                    onClick={handleSend} 
-                    disabled={!input.trim() && !attachedFile} 
-                    className="bg-slate-900 dark:bg-blue-600 text-white rounded-2xl px-6 py-3.5 text-sm font-bold disabled:opacity-30 active:scale-95 transition-all"
-                  >
-                    Send
-                  </button>
-                )}
+                <button 
+                  onClick={handleSend} 
+                  disabled={loading || (!input.trim() && !attachedFile)} 
+                  className="bg-slate-900 dark:bg-blue-600 text-white rounded-2xl px-6 py-3.5 text-sm font-bold disabled:opacity-30 active:scale-95 transition-all shadow-md"
+                >
+                  Send
+                </button>
               </div>
             </div>
           </div>
