@@ -1,9 +1,12 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Paperclip, X, Image as ImageIcon, FileText, ChevronLeft, ChevronRight, Plus, Send, StopCircle } from 'lucide-react'
+import { 
+  Paperclip, X, Image as ImageIcon, FileText, 
+  ChevronLeft, ChevronRight, Plus, Send, StopCircle 
+} from 'lucide-react'
 
 const SUBJECTS = [
   'Mathematics AA', 'Mathematics AI', 'Chemistry', 'Biology', 'Physics',
@@ -39,22 +42,20 @@ export default function GeneratePage() {
   const abortControllerRef = useRef<AbortController | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
-  const pathname = usePathname()
   const supabase = createClient()
 
-  const navLinks = [
-    { name: 'Home', href: '/home' },
-    { name: 'Generate', href: '/generate' },
-    { name: 'AI Check', href: '/ai-check' },
-    { name: 'AI Polish', href: '/ai-polish' }, 
-    { name: 'Practice Papers', href: '/practice-papers' },
-  ]
-
-  useEffect(() => { loadHistory() }, [])
+  useEffect(() => { 
+    loadHistory() 
+  }, [])
 
   const loadHistory = async () => {
-    const { data } = await supabase.from('generations').select('*').eq('tool', 'generate').order('created_at', { ascending: false }).limit(50)
-    if (data) setHistory([...data].sort((a, b) => (b.metadata?.pinned ? 1 : 0) - (a.metadata?.pinned ? 1 : 0)))
+    const { data } = await supabase
+      .from('generations')
+      .select('*')
+      .eq('tool', 'generate')
+      .order('created_at', { ascending: false })
+      .limit(50)
+    if (data) setHistory(data)
   }
 
   const handleLogout = async () => {
@@ -64,7 +65,8 @@ export default function GeneratePage() {
 
   const handleNew = () => {
     handleStop()
-    setSubject(''); setTaskType(''); setMessages([]); setInput(''); setError(''); setStarted(false); setCurrentChatId(null); setAttachedFile(null)
+    setSubject(''); setTaskType(''); setMessages([]); setInput(''); 
+    setError(''); setStarted(false); setCurrentChatId(null); setAttachedFile(null)
   }
 
   const handleStop = () => {
@@ -73,6 +75,17 @@ export default function GeneratePage() {
       abortControllerRef.current = null
       setLoading(false)
     }
+  }
+
+  // Utility to keep UI clean and remove AI "nonsense" symbols
+  const cleanText = (text: string) => {
+    return text
+      .replace(/\*\*/g, '') 
+      .replace(/\|/g, '')   
+      .replace(/---/g, '')  
+      .replace(/#/g, '')    
+      .replace(/__|~~/g, '') 
+      .trim();
   }
 
   const processFile = (file: File) => {
@@ -96,24 +109,65 @@ export default function GeneratePage() {
     if (file) processFile(file)
   }
 
+  const loadGeneration = (gen: Generation) => {
+    handleStop()
+    setSubject(gen.subject || '')
+    setTaskType(gen.task_type || '')
+    setCurrentChatId(gen.id)
+    try {
+      const parsed = JSON.parse(gen.output)
+      setMessages(Array.isArray(parsed) ? parsed : [{ role: 'user', content: gen.input }, { role: 'assistant', content: gen.output }])
+    } catch {
+      setMessages([{ role: 'user', content: gen.input }, { role: 'assistant', content: gen.output }])
+    }
+    setStarted(true)
+    setError('')
+  }
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    if (!confirm('Delete this chat?')) return
+    await supabase.from('generations').delete().eq('id', id)
+    if (currentChatId === id) handleNew()
+    loadHistory()
+  }
+
   const handleSend = async () => {
     if ((!input.trim() && !attachedFile) || loading) return
-    if (!started && (!subject || !taskType)) { setError('Please select a subject and task type'); return }
+    if (!started && (!subject || !taskType)) { setError('Required fields missing'); return }
 
     const controller = new AbortController()
     abortControllerRef.current = controller
-    const userMessage: Message = { role: 'user', content: attachedFile ? `[File ${attachedFile.name}] ${input}` : input }
     
-    setMessages(prev => [...prev, userMessage])
-    setInput(''); setAttachedFile(null); setLoading(true); setStarted(true); setError('')
+    // Safety check: Don't send image data to a text-only model
+    const isImage = attachedFile?.type === 'image'
+    const userMessage: Message = { 
+      role: 'user', 
+      content: attachedFile ? `[File: ${attachedFile.name}] ${input}` : input 
+    }
+    
+    const updatedMessages = [...messages, userMessage]
+    setMessages(updatedMessages)
+    setInput('')
+    setAttachedFile(null)
+    setLoading(true)
+    setStarted(true)
+    setError('')
 
     try {
       const res = await fetch('/api/gen', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, taskType, messages: [...messages, userMessage], fileData: attachedFile?.data }),
+        body: JSON.stringify({ 
+          subject, 
+          taskType, 
+          messages: updatedMessages, 
+          fileData: isImage ? null : attachedFile?.data 
+        }),
         signal: controller.signal
       })
+
+      if (!res.ok) throw new Error('Stream error')
 
       const reader = res.body?.getReader()
       const decoder = new TextDecoder()
@@ -134,31 +188,55 @@ export default function GeneratePage() {
               fullOutput += text
               setMessages(prev => {
                 const updated = [...prev]
-                updated[updated.length - 1].content = fullOutput
+                updated[updated.length - 1].content = cleanText(fullOutput)
                 return updated
               })
             } catch {}
           }
         }
       }
-    } catch (err) { setError('Connection error') } finally { setLoading(false) }
+
+      // --- SAVE TO SUPABASE ---
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user && fullOutput) {
+        const cleanedOutput = cleanText(fullOutput)
+        const chatPayload = [...updatedMessages, { role: 'assistant', content: cleanedOutput }]
+        
+        if (currentChatId) {
+          await supabase.from('generations').update({ output: JSON.stringify(chatPayload) }).eq('id', currentChatId)
+        } else {
+          const { data } = await supabase.from('generations').insert({ 
+            user_id: user.id, tool: 'generate', subject, task_type: taskType, 
+            input: userMessage.content, output: JSON.stringify(chatPayload) 
+          }).select().single()
+          if (data) setCurrentChatId(data.id)
+        }
+        loadHistory()
+      }
+
+    } catch (err: any) {
+      if (err.name !== 'AbortError') setError('Connection lost. Please try again.')
+    } finally {
+      setLoading(false)
+      abortControllerRef.current = null
+    }
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 font-sans">
+    <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors">
       
       {/* NAVBAR */}
       <nav className="w-full bg-white/90 dark:bg-[#0f172a]/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <button 
-                onClick={() => setSidebarOpen(!sidebarOpen)} 
-                className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+              onClick={() => setSidebarOpen(!sidebarOpen)} 
+              className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
             >
               {sidebarOpen ? <ChevronLeft size={24} /> : <ChevronRight size={24} />}
             </button>
             <Link href="/home" className="text-2xl font-bold text-blue-600 dark:text-white tracking-tight">
-                IB Study Tools
+              IB Study Tools
             </Link>
           </div>
           <button onClick={handleLogout} className="text-base font-semibold text-slate-400 hover:text-red-500 transition">
@@ -168,6 +246,7 @@ export default function GeneratePage() {
       </nav>
 
       <div className="flex flex-1 overflow-hidden">
+        {/* SIDEBAR */}
         {sidebarOpen && (
           <aside className="w-80 border-r border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30 flex flex-col shrink-0">
             <div className="p-6">
@@ -177,16 +256,26 @@ export default function GeneratePage() {
             </div>
             <div className="flex-1 overflow-y-auto px-4 space-y-2">
               {history.map(gen => (
-                <button key={gen.id} onClick={() => setStarted(true)} className="w-full text-left p-4 rounded-2xl hover:bg-white dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
-                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">{gen.subject}</p>
+                <button 
+                  key={gen.id} 
+                  onClick={() => loadGeneration(gen)} 
+                  className={`group relative w-full text-left p-4 rounded-2xl transition-all border border-transparent ${currentChatId === gen.id ? 'bg-white dark:bg-slate-800 shadow-sm border-slate-100 dark:border-slate-700' : 'hover:bg-white/50 dark:hover:bg-slate-800/50'}`}
+                >
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate pr-6">{gen.subject}</p>
                   <p className="text-xs text-slate-400 truncate mt-1">{gen.task_type}</p>
+                  <span onClick={(e) => handleDelete(e, gen.id)} className="absolute right-3 top-4 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all">✕</span>
                 </button>
               ))}
             </div>
           </aside>
         )}
 
-        <main onDragOver={(e) => e.preventDefault()} onDrop={onDrop} className="flex-1 flex flex-col relative bg-white dark:bg-[#0f172a]">
+        <main 
+          onDragOver={(e) => e.preventDefault()} 
+          onDrop={onDrop} 
+          className="flex-1 flex flex-col relative bg-white dark:bg-[#0f172a]"
+        >
+          {/* CONFIG OVERLAY */}
           {!started && (
             <div className="absolute inset-0 flex items-center justify-center p-8 z-40 bg-white dark:bg-[#0f172a]">
               <div className="max-w-lg w-full space-y-10 text-center">
@@ -212,6 +301,7 @@ export default function GeneratePage() {
             </div>
           )}
 
+          {/* CHAT DISPLAY */}
           <div className="flex-1 overflow-y-auto p-8 space-y-10 pb-44">
             <div className="max-w-4xl mx-auto space-y-8">
               {messages.map((msg, i) => (
@@ -234,19 +324,19 @@ export default function GeneratePage() {
             </div>
           </div>
 
-          {/* INPUT AREA */}
+          {/* INPUT BAR */}
           <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-white dark:from-[#0f172a] via-white/90 dark:via-[#0f172a]/90 to-transparent z-30">
             <div className="max-w-4xl mx-auto space-y-4">
               {attachedFile && (
                 <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl w-fit">
                     {attachedFile.type === 'pdf' ? <FileText size={18} className="text-blue-600" /> : <ImageIcon size={18} className="text-blue-600" />}
                     <span className="text-sm font-bold text-blue-600 uppercase tracking-tight">{attachedFile.name}</span>
-                    <button onClick={() => setAttachedFile(null)} className="text-blue-400 hover:text-red-500"><X size={18} /></button>
+                    <button onClick={() => setAttachedFile(null)} className="text-blue-400 hover:text-red-500 transition-colors"><X size={18} /></button>
                 </div>
               )}
 
               <div className="flex gap-4 items-end bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-[32px] p-3 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all shadow-lg">
-                <input type="file" ref={fileInputRef} onChange={e => e.target.files?.[0] && processFile(e.target.files[0])} accept="image/*,.pdf" className="hidden" />
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*,.pdf" className="hidden" />
                 <button onClick={() => fileInputRef.current?.click()} className="p-4 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl transition-all">
                   <Paperclip size={24} />
                 </button>
@@ -254,7 +344,7 @@ export default function GeneratePage() {
                   value={input} 
                   onChange={e => setInput(e.target.value)} 
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} 
-                  placeholder="Ask your tutor anything" 
+                  placeholder={attachedFile?.type === 'image' ? "This model is text-only. Describe the image..." : "Ask your tutor anything..."} 
                   className="flex-1 bg-transparent border-none p-4 text-base focus:outline-none resize-none max-h-48 dark:text-white" 
                   rows={1} 
                 />
