@@ -1,11 +1,30 @@
 import { NextResponse } from 'next/server';
 
-// Forces Vercel to stream the response immediately
 export const runtime = 'edge'; 
 
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
+    const { messages, fileData } = await req.json();
+
+    // 1. Prepare the messages for the AI
+    // We take the last message (the user's prompt) and turn it into a content array if there's an image
+    const processedMessages = messages.map((msg: any, index: number) => {
+      if (index === messages.length - 1 && fileData) {
+        return {
+          role: "user",
+          content: [
+            { type: "text", text: msg.content },
+            {
+              type: "image_url",
+              image_url: {
+                url: fileData, // The Base64 string from the frontend
+              },
+            },
+          ],
+        };
+      }
+      return msg;
+    });
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -16,12 +35,11 @@ export async function POST(req: Request) {
         "X-Title": "IB Study Tools",
       },
       body: JSON.stringify({
-        model: "openai/gpt-oss-120b:free", 
-        messages: messages,
+        // SWITCHED TO A VISION MODEL: Gemini Flash is free/cheap and great at screenshots
+        model: "google/gemini-flash-1.5-8b", 
+        messages: processedMessages,
         stream: true,
-        // TEMPERATURE CONTROL: 0.5 makes it more focused and logical
         temperature: 0.5,
-        // MAX TOKENS: Prevents the AI from rambling on forever
         max_tokens: 2000, 
       }),
     });
@@ -32,13 +50,11 @@ export async function POST(req: Request) {
       return new NextResponse(errorText, { status: response.status });
     }
 
-    // Return the stream with headers that prevent Vercel/Browsers from buffering
     return new NextResponse(response.body, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
-        'Content-Encoding': 'none', 
       },
     });
 

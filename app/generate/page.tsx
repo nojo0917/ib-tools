@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { Paperclip, X, Image as ImageIcon } from 'lucide-react'
 
 const SUBJECTS = [
   'Mathematics AA', 'Mathematics AI', 'Chemistry', 'Biology', 'Physics',
@@ -34,13 +35,16 @@ export default function GeneratePage() {
   const [started, setStarted] = useState(false)
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   
+  // New State for File Uploads
+  const [attachedFile, setAttachedFile] = useState<{ name: string; data: string; type: string } | null>(null)
+  
   const abortControllerRef = useRef<AbortController | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
 
-  // Updated name to "AI Polish" to match your new branding
   const navLinks = [
     { name: 'Home', href: '/home' },
     { name: 'Generate', href: '/generate' },
@@ -64,7 +68,7 @@ export default function GeneratePage() {
 
   const handleNew = () => {
     handleStop()
-    setSubject(''); setTaskType(''); setMessages([]); setInput(''); setError(''); setStarted(false); setCurrentChatId(null)
+    setSubject(''); setTaskType(''); setMessages([]); setInput(''); setError(''); setStarted(false); setCurrentChatId(null); setAttachedFile(null)
   }
 
   const handleStop = () => {
@@ -73,6 +77,27 @@ export default function GeneratePage() {
       abortControllerRef.current = null
       setLoading(false)
     }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Vercel limit is ~4.5MB total request size
+    if (file.size > 4 * 1024 * 1024) {
+      alert("File is too large. Please keep screenshots under 4MB.")
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      setAttachedFile({
+        name: file.name,
+        type: file.type,
+        data: event.target?.result as string,
+      })
+    }
+    reader.readAsDataURL(file)
   }
 
   const loadGeneration = (gen: Generation) => {
@@ -95,7 +120,7 @@ export default function GeneratePage() {
   }
 
   const handleSend = async () => {
-    if (!input.trim() || loading) return
+    if ((!input.trim() && !attachedFile) || loading) return
     if (!started && (!subject || !taskType)) {
       setError('Select subject and task type'); return
     }
@@ -103,19 +128,22 @@ export default function GeneratePage() {
     const controller = new AbortController()
     abortControllerRef.current = controller
 
-    const currentInput = input; 
-    const userMessage: Message = { role: 'user', content: currentInput }
+    const currentInput = input;
+    const currentFile = attachedFile; 
+    const userMessage: Message = { 
+        role: 'user', 
+        content: currentFile ? `[Attached Image: ${currentFile.name}] ${currentInput}` : currentInput 
+    }
     
     const systemPrompt: Message = {
         role: 'system',
-        content: `You are an expert IB Tutor for ${subject}. 
-        The student is asking for help with a ${taskType}. 
+        content: `You are an expert IB Tutor for ${subject}. The student is asking for help with a ${taskType}. 
+        If an image is provided, analyze it carefully (it's likely a textbook, problem, or handwritten notes). 
         STRICT RULES:
-        1. Be extremely concise. Avoid long introductions or filler.
+        1. Be extremely concise. Avoid long introductions.
         2. Use bullet points where possible.
-        3. Do not exceed 300 words unless explicitly asked for a full essay.
-        4. Focus purely on high-mark IB criteria. 
-        Professional and direct.`
+        3. Do not exceed 300 words.
+        4. Focus purely on high-mark IB criteria.`
     };
 
     const messagesForAPI = [
@@ -126,6 +154,7 @@ export default function GeneratePage() {
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setAttachedFile(null); // Clear file after sending
     setLoading(true);
     setStarted(true);
     setError('');
@@ -134,7 +163,13 @@ export default function GeneratePage() {
       const res = await fetch('/api/gen', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, taskType, prompt: currentInput, messages: messagesForAPI }),
+        body: JSON.stringify({ 
+            subject, 
+            taskType, 
+            prompt: currentInput, 
+            messages: messagesForAPI,
+            fileData: currentFile?.data // Send Base64 data to backend
+        }),
         signal: controller.signal
       })
 
@@ -214,11 +249,10 @@ export default function GeneratePage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors">
       
-      {/* --- NAVBAR (Fixed to match exact style) --- */}
+      {/* NAVBAR */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
-            {/* Sidebar Toggle Button Container */}
             <div className="w-14 shrink-0 flex items-center"> 
                 <button 
                     onClick={() => setSidebarOpen(!sidebarOpen)} 
@@ -229,7 +263,6 @@ export default function GeneratePage() {
                   </span>
                 </button>
             </div>
-            
             <Link href="/home">
               <span className="text-xl font-bold text-blue-600 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
                 IB Study Tools
@@ -263,7 +296,6 @@ export default function GeneratePage() {
       </nav>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar and Main content remains the same... */}
         {sidebarOpen && (
           <aside className="w-72 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col shrink-0">
             <div className="p-4">
@@ -317,44 +349,65 @@ export default function GeneratePage() {
               {loading && (
                 <div className="flex items-center gap-3">
                   <div className="text-xs font-bold text-blue-500 animate-pulse px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-full w-fit">Tutor is drafting...</div>
-                  <button 
-                    onClick={handleStop}
-                    className="text-[10px] bg-red-50 dark:bg-red-900/20 text-red-500 font-black uppercase tracking-tighter px-3 py-1.5 rounded-lg border border-red-100 dark:border-red-900/50 hover:bg-red-500 hover:text-white transition-all"
-                  >
-                    Stop AI
-                  </button>
+                  <button onClick={handleStop} className="text-[10px] bg-red-50 dark:bg-red-900/20 text-red-500 font-black uppercase tracking-tighter px-3 py-1.5 rounded-lg border border-red-100 dark:border-red-900/50 hover:bg-red-500 hover:text-white transition-all">Stop AI</button>
                 </div>
               )}
               <div ref={bottomRef} />
             </div>
           </div>
 
+          {/* INPUT AREA WITH FILE UPLOAD */}
           <div className="absolute bottom-0 left-0 right-0 p-6 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-xl border-t border-slate-100 dark:border-slate-800 z-30">
-            <div className="max-w-4xl mx-auto flex gap-4 items-end bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-2 focus-within:ring-2 focus-within:ring-blue-500/50 transition-all">
-              <textarea 
-                value={input} 
-                onChange={e => setInput(e.target.value)} 
-                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} 
-                placeholder="Message your tutor..." 
-                className="flex-1 bg-transparent border-none p-4 text-sm focus:outline-none resize-none dark:text-white" 
-                rows={1} 
-              />
-              {loading ? (
-                 <button 
-                  onClick={handleStop}
-                  className="bg-red-500 text-white rounded-2xl px-6 py-3.5 text-sm font-bold active:scale-95 transition-all"
-                 >
-                   Stop
-                 </button>
-              ) : (
-                <button 
-                  onClick={handleSend} 
-                  disabled={!input.trim()} 
-                  className="bg-slate-900 dark:bg-blue-600 text-white rounded-2xl px-6 py-3.5 text-sm font-bold disabled:opacity-30 active:scale-95 transition-all"
-                >
-                  Send
-                </button>
+            <div className="max-w-4xl mx-auto space-y-3">
+              
+              {/* Image Preview Chip */}
+              {attachedFile && (
+                <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl w-fit">
+                    <ImageIcon size={14} className="text-blue-600" />
+                    <span className="text-[10px] font-bold text-blue-600 truncate max-w-[150px] uppercase tracking-wider">{attachedFile.name}</span>
+                    <button onClick={() => setAttachedFile(null)} className="text-blue-400 hover:text-red-500 transition-colors">
+                        <X size={14} />
+                    </button>
+                </div>
               )}
+
+              <div className="flex gap-4 items-end bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-2 focus-within:ring-2 focus-within:ring-blue-500/50 transition-all">
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileChange} 
+                  accept="image/*" 
+                  className="hidden" 
+                />
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-3.5 mb-0.5 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl transition-all"
+                  title="Upload Screenshot"
+                >
+                  <Paperclip size={20} />
+                </button>
+
+                <textarea 
+                  value={input} 
+                  onChange={e => setInput(e.target.value)} 
+                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} 
+                  placeholder={attachedFile ? "Ask a question about this image..." : "Message your tutor..."} 
+                  className="flex-1 bg-transparent border-none p-4 text-sm focus:outline-none resize-none dark:text-white" 
+                  rows={1} 
+                />
+                
+                {loading ? (
+                  <button onClick={handleStop} className="bg-red-500 text-white rounded-2xl px-6 py-3.5 text-sm font-bold active:scale-95 transition-all">Stop</button>
+                ) : (
+                  <button 
+                    onClick={handleSend} 
+                    disabled={!input.trim() && !attachedFile} 
+                    className="bg-slate-900 dark:bg-blue-600 text-white rounded-2xl px-6 py-3.5 text-sm font-bold disabled:opacity-30 active:scale-95 transition-all"
+                  >
+                    Send
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </main>
