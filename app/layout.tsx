@@ -42,28 +42,42 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {/* The main content grows to push the footer down */}
+          {/* Main Content Area */}
           <main className="flex-grow">
             {children}
           </main>
 
-          {/* Professional Footer */}
-          <footer className="w-full border-t border-border py-8 mt-auto bg-card/50">
-            <div className="max-w-5xl mx-auto px-6 flex flex-col items-center gap-3">
-              <p className="text-sm font-semibold text-muted-foreground">
+          {/* Minimalist Footer */}
+          <footer className="w-full border-t border-border py-6 mt-auto bg-card/30">
+            <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+              <p className="text-xs text-muted-foreground">
                 © 2026 IB Study Tools
               </p>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-xs text-muted-foreground">Questions or Feedback?</span>
-                <a 
-                  href="mailto:ibstudytools.contact@gmail.com" 
-                  className="text-xs font-medium text-primary hover:underline underline-offset-4 transition-colors"
-                >
-                  ibstudytools.contact@gmail.com
-                </a>
+              <div className="flex gap-4">
+                <span className="text-xs text-muted-foreground/50 italic">
+                  Independent Educational Resource
+                </span>
               </div>
             </div>
           </footer>
+
+          {/* Floating Contact Button (Option 2) */}
+          <div className="fixed bottom-6 right-6 z-50">
+            <a 
+              href="mailto:ibstudytools.contact@gmail.com"
+              className="group relative flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 border border-primary/20"
+            >
+              {/* Pulsing Notification Dot */}
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-300"></span>
+              </span>
+              
+              <span className="text-xs font-semibold tracking-wide">
+                Contact Support
+              </span>
+            </a>
+          </div>
         </ThemeProvider>
       </body>
     </html>
