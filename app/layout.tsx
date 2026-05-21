@@ -13,9 +13,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Comprehensive SEO Metadata
 export const metadata: Metadata = {
-  title: "IB Study Tools",
-  description: "AI-powered tools for IB Diploma Programme students",
+  title: "IB Study Tools | AI Tutor, Practice Papers & AI Checker",
+  description: "The all-in-one AI toolkit for IB students: AI Tutor, Exam Checker, AI Polisher, and custom Practice Papers. Built by an IB student to help you excel.",
 };
 
 export default function RootLayout({
@@ -42,9 +43,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {/* The 'flex-grow' on <main> ensures that the footer 
-              is pushed to the bottom of the screen even on short pages.
-          */}
+          {/* Main Content Area */}
           <main className="flex-grow">
             {children}
           </main>
@@ -89,6 +88,7 @@ export default function RootLayout({
               {/* Minimal Disclaimer */}
               <p className="text-[10px] text-muted-foreground/40 max-w-sm mt-2 leading-relaxed">
                 Not affiliated with the International Baccalaureate.
+                <br />
                 Built for students by an IB student.
               </p>
             </div>
