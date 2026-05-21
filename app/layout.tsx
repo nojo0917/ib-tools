@@ -72,7 +72,7 @@ export default function RootLayout({
 
               {/* Ultra-minimal Disclaimer */}
               <p className="text-[10px] text-muted-foreground/40 max-w-sm mt-2">
-                Not affiliated with the International Baccalaureate.
+                Not affiliated with the International Baccalaureate or Save My Exams.
               </p>
             </div>
           </footer>
