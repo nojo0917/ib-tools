@@ -7,19 +7,19 @@ export async function POST(req: Request) {
     const { messages, fileData } = await req.json();
 
     const processedMessages = messages.map((msg: any, index: number) => {
-      // We only process the attachment for the latest user message
+      // Attach file data only to the latest user message
       if (index === messages.length - 1 && fileData) {
         
-        // If it's a PDF (the frontend sends it as plain text)
+        // If it's a PDF (sent as plain text from the frontend)
         if (!fileData.startsWith('data:image')) {
           return {
             role: "user",
-            content: `${msg.content}\n\n[DOCUMENT CONTEXT]:\n${fileData}`,
+            content: `${msg.content}\n\n[DOCUMENT CONTENT]:\n${fileData}`,
           };
         } 
         
-        // If it's an image, GLM-5.1 cannot process it.
-        // We ignore the image data but keep the text prompt.
+        // If it's an image, this model is blind to it.
+        // We ignore the image data to save tokens and prevent confusion.
         return {
           role: "user",
           content: msg.content,
@@ -37,11 +37,11 @@ export async function POST(req: Request) {
         "X-Title": "IB Study Tools",
       },
       body: JSON.stringify({
-        model: "z-ai/glm-5.1", 
+        model: "openai/gpt-oss-120b:free", 
         messages: processedMessages,
         stream: true,
         temperature: 0.5,
-        max_tokens: 2048, 
+        max_tokens: 2000, 
       }),
     });
 
