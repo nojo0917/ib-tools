@@ -77,7 +77,6 @@ export default function GeneratePage() {
     }
   }
 
-  // Utility to keep UI clean and remove AI "nonsense" symbols
   const cleanText = (text: string) => {
     return text
       .replace(/\*\*/g, '') 
@@ -102,6 +101,12 @@ export default function GeneratePage() {
       reader.readAsDataURL(file)
     }
   }
+
+  // FIXED: Explicitly added handleFileChange function
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+  };
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault()
@@ -139,7 +144,6 @@ export default function GeneratePage() {
     const controller = new AbortController()
     abortControllerRef.current = controller
     
-    // Safety check: Don't send image data to a text-only model
     const isImage = attachedFile?.type === 'image'
     const userMessage: Message = { 
       role: 'user', 
@@ -196,7 +200,6 @@ export default function GeneratePage() {
         }
       }
 
-      // --- SAVE TO SUPABASE ---
       const { data: { user } } = await supabase.auth.getUser()
       if (user && fullOutput) {
         const cleanedOutput = cleanText(fullOutput)
@@ -224,29 +227,19 @@ export default function GeneratePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors">
-      
-      {/* NAVBAR */}
       <nav className="w-full bg-white/90 dark:bg-[#0f172a]/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <button 
-              onClick={() => setSidebarOpen(!sidebarOpen)} 
-              className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-            >
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-blue-600 hover:text-white transition-all shadow-sm">
               {sidebarOpen ? <ChevronLeft size={24} /> : <ChevronRight size={24} />}
             </button>
-            <Link href="/home" className="text-2xl font-bold text-blue-600 dark:text-white tracking-tight">
-              IB Study Tools
-            </Link>
+            <Link href="/home" className="text-2xl font-bold text-blue-600 dark:text-white tracking-tight">IB Study Tools</Link>
           </div>
-          <button onClick={handleLogout} className="text-base font-semibold text-slate-400 hover:text-red-500 transition">
-            Logout
-          </button>
+          <button onClick={handleLogout} className="text-base font-semibold text-slate-400 hover:text-red-500 transition">Logout</button>
         </div>
       </nav>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* SIDEBAR */}
         {sidebarOpen && (
           <aside className="w-80 border-r border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30 flex flex-col shrink-0">
             <div className="p-6">
@@ -270,12 +263,7 @@ export default function GeneratePage() {
           </aside>
         )}
 
-        <main 
-          onDragOver={(e) => e.preventDefault()} 
-          onDrop={onDrop} 
-          className="flex-1 flex flex-col relative bg-white dark:bg-[#0f172a]"
-        >
-          {/* CONFIG OVERLAY */}
+        <main onDragOver={(e) => e.preventDefault()} onDrop={onDrop} className="flex-1 flex flex-col relative bg-white dark:bg-[#0f172a]">
           {!started && (
             <div className="absolute inset-0 flex items-center justify-center p-8 z-40 bg-white dark:bg-[#0f172a]">
               <div className="max-w-lg w-full space-y-10 text-center">
@@ -292,16 +280,13 @@ export default function GeneratePage() {
                     <option value="">Task Type</option>
                     {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
-                  <button onClick={() => (subject && taskType) ? setStarted(true) : setError('Required fields missing')} className="w-full bg-blue-600 text-white rounded-2xl py-5 text-lg font-bold shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">
-                    Start Session
-                  </button>
+                  <button onClick={() => (subject && taskType) ? setStarted(true) : setError('Required fields missing')} className="w-full bg-blue-600 text-white rounded-2xl py-5 text-lg font-bold shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">Start Session</button>
                   {error && <p className="text-red-500 font-bold text-sm uppercase tracking-widest">{error}</p>}
                 </div>
               </div>
             </div>
           )}
 
-          {/* CHAT DISPLAY */}
           <div className="flex-1 overflow-y-auto p-8 space-y-10 pb-44">
             <div className="max-w-4xl mx-auto space-y-8">
               {messages.map((msg, i) => (
@@ -313,18 +298,13 @@ export default function GeneratePage() {
               ))}
               {loading && (
                 <div className="flex items-center gap-4">
-                  <div className="text-base font-bold text-blue-500 animate-pulse px-6 py-3 bg-blue-50 dark:bg-blue-900/20 rounded-full">
-                    Tutor is thinking
-                  </div>
-                  <button onClick={handleStop} className="p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all">
-                    <StopCircle size={24} />
-                  </button>
+                  <div className="text-base font-bold text-blue-500 animate-pulse px-6 py-3 bg-blue-50 dark:bg-blue-900/20 rounded-full">Tutor is thinking</div>
+                  <button onClick={handleStop} className="p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"><StopCircle size={24} /></button>
                 </div>
               )}
             </div>
           </div>
 
-          {/* INPUT BAR */}
           <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-white dark:from-[#0f172a] via-white/90 dark:via-[#0f172a]/90 to-transparent z-30">
             <div className="max-w-4xl mx-auto space-y-4">
               {attachedFile && (
@@ -334,27 +314,11 @@ export default function GeneratePage() {
                     <button onClick={() => setAttachedFile(null)} className="text-blue-400 hover:text-red-500 transition-colors"><X size={18} /></button>
                 </div>
               )}
-
               <div className="flex gap-4 items-end bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-[32px] p-3 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all shadow-lg">
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*,.pdf" className="hidden" />
-                <button onClick={() => fileInputRef.current?.click()} className="p-4 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl transition-all">
-                  <Paperclip size={24} />
-                </button>
-                <textarea 
-                  value={input} 
-                  onChange={e => setInput(e.target.value)} 
-                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} 
-                  placeholder={attachedFile?.type === 'image' ? "This model is text-only. Describe the image..." : "Ask your tutor anything..."} 
-                  className="flex-1 bg-transparent border-none p-4 text-base focus:outline-none resize-none max-h-48 dark:text-white" 
-                  rows={1} 
-                />
-                <button 
-                  onClick={handleSend} 
-                  disabled={loading || (!input.trim() && !attachedFile)} 
-                  className="bg-slate-900 dark:bg-blue-600 text-white rounded-[24px] p-4 font-bold disabled:opacity-20 hover:scale-105 active:scale-95 transition-all shadow-md"
-                >
-                  <Send size={24} />
-                </button>
+                <button onClick={() => fileInputRef.current?.click()} className="p-4 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl transition-all"><Paperclip size={24} /></button>
+                <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} placeholder={attachedFile?.type === 'image' ? "Text-only model: describe the image..." : "Ask your tutor anything..."} className="flex-1 bg-transparent border-none p-4 text-base focus:outline-none resize-none max-h-48 dark:text-white" rows={1} />
+                <button onClick={handleSend} disabled={loading || (!input.trim() && !attachedFile)} className="bg-slate-900 dark:bg-blue-600 text-white rounded-[24px] p-4 font-bold disabled:opacity-20 hover:scale-105 active:scale-95 transition-all shadow-md"><Send size={24} /></button>
               </div>
             </div>
           </div>
