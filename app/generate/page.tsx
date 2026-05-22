@@ -209,36 +209,36 @@ export default function GeneratePage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-[#f8fafc] dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 overflow-hidden">
+    <div className="h-screen flex flex-col bg-[#0f172a] text-slate-100 overflow-hidden font-sans">
       
-      {/* NAVBAR (Exactly matching AI Check/Polish Layout) */}
-      <nav className="w-full bg-white dark:bg-[#0f172a] border-b border-slate-100 dark:border-slate-800 shrink-0 z-50">
-        <div className="w-full px-12 h-16 flex items-center justify-between">
+      {/* FLOATING PILL NAVBAR CONTAINER */}
+      <header className="w-full pt-6 px-12 shrink-0 z-50">
+        <div className="max-w-[1600px] mx-auto h-16 bg-[#1e293b]/50 backdrop-blur-xl border border-slate-700/50 rounded-full px-8 flex items-center justify-between shadow-2xl">
           
           {/* Left: Sidebar Toggle + Logo */}
-          <div className="flex items-center gap-8">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+          <div className="flex items-center gap-6">
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-700 rounded-full transition-colors">
               {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
             </button>
             <Link href="/home">
-              <span className="text-xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
+              <span className="text-xl font-bold text-white tracking-tight" style={{ fontFamily: 'Georgia, serif' }}>
                 IB Study Tools
               </span>
             </Link>
           </div>
 
-          {/* Center: Navigation Pill */}
-          <div className="flex items-center gap-1 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-1">
+          {/* Center: The Navigation Pill Links */}
+          <div className="hidden md:flex items-center gap-1 bg-[#0f172a]/40 border border-slate-700/30 rounded-2xl p-1">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
               return (
                 <Link 
                   key={link.href} 
                   href={link.href} 
-                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                  className={`px-5 py-1.5 rounded-xl text-sm font-bold transition-all ${
                     isActive 
-                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' 
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-slate-700/60 text-blue-400 shadow-lg border border-slate-600/50' 
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   {link.name}
@@ -247,35 +247,36 @@ export default function GeneratePage() {
             })}
           </div>
 
-          {/* Right: Logout */}
-          <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-red-500 transition">
+          {/* Right: Logout Button */}
+          <button onClick={handleLogout} className="text-xs font-black uppercase tracking-widest text-slate-500 hover:text-red-400 transition-colors px-2">
             Logout
           </button>
         </div>
-      </nav>
+      </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden mt-4">
         {/* SIDEBAR */}
         {sidebarOpen && (
-          <aside className="w-72 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col shrink-0">
+          <aside className="w-72 border-r border-slate-800 bg-[#0f172a] flex flex-col shrink-0">
             <div className="p-4">
-              <button onClick={handleNew} className="w-full bg-slate-900 dark:bg-blue-600 text-white rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-md">
+              <button onClick={handleNew} className="w-full bg-blue-600 text-white rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-500 transition-all shadow-lg shadow-blue-900/20">
                 <Plus size={16} /> New Session
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-2 space-y-1">
               {history.map(gen => (
-                <div key={gen.id} className={`group relative w-full p-3 rounded-xl transition-all border border-transparent flex flex-col cursor-pointer ${currentChatId === gen.id ? 'bg-white dark:bg-slate-800 shadow-sm border-slate-200 dark:border-slate-700' : 'hover:bg-slate-200/50 dark:hover:bg-slate-800/50'}`} onClick={() => loadGeneration(gen)}>
+                <div key={gen.id} className={`group relative w-full p-3 rounded-xl transition-all border border-transparent flex flex-col cursor-pointer ${currentChatId === gen.id ? 'bg-slate-800 border-slate-700 shadow-md' : 'hover:bg-slate-800/40'}`} onClick={() => loadGeneration(gen)}>
                   <div className="flex items-center justify-between pr-8">
                     <p className="text-xs font-bold truncate">{gen.metadata?.label || gen.subject}</p>
-                    {gen.metadata?.pinned && <Pin size={10} className="text-blue-500 fill-blue-500" />}
+                    {gen.metadata?.pinned && <Pin size={10} className="text-blue-400 fill-blue-400" />}
                   </div>
-                  <p className="text-[10px] text-slate-400 truncate mt-0.5">{gen.task_type}</p>
+                  <p className="text-[10px] text-slate-500 truncate mt-0.5">{gen.task_type}</p>
                   
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-1 bg-white dark:bg-slate-800 p-1 rounded-md shadow-sm border border-slate-200 dark:border-slate-700">
-                    <button onClick={(e) => { e.stopPropagation(); togglePin(gen.id, !!gen.metadata?.pinned) }} className="p-1 hover:text-blue-500"><Pin size={12} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); renameChat(gen.id) }} className="p-1 hover:text-green-500"><Edit2 size={12} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDelete(gen.id) }} className="p-1 hover:text-red-500"><Trash2 size={12} /></button>
+                  {/* SIDEBAR ACTIONS */}
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-1 bg-slate-800 p-1 rounded-lg border border-slate-700 shadow-xl">
+                    <button onClick={(e) => { e.stopPropagation(); togglePin(gen.id, !!gen.metadata?.pinned) }} className="p-1 hover:text-blue-400"><Pin size={12} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); renameChat(gen.id) }} className="p-1 hover:text-emerald-400"><Edit2 size={12} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDelete(gen.id) }} className="p-1 hover:text-red-400"><Trash2 size={12} /></button>
                   </div>
                 </div>
               ))}
@@ -283,61 +284,61 @@ export default function GeneratePage() {
           </aside>
         )}
 
-        <main className="flex-1 flex flex-col relative overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a]">
+        <main className="flex-1 flex flex-col relative overflow-hidden">
           {!started && (
-            <div className="absolute inset-0 flex items-center justify-center p-8 z-40 bg-[#f8fafc] dark:bg-[#0f172a]">
+            <div className="absolute inset-0 flex items-center justify-center p-8 z-40 bg-[#0f172a]">
               <div className="max-w-lg w-full space-y-8 text-center">
-                <h2 className="text-5xl font-black">Tutor Mode</h2>
+                <h2 className="text-6xl font-black tracking-tighter text-white">Tutor Mode</h2>
                 <div className="space-y-4">
-                  <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-bold outline-none shadow-sm">
-                    <option value="">Subject</option>
+                  <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-5 rounded-2xl border border-slate-700 bg-slate-800/50 font-bold outline-none shadow-xl focus:ring-2 focus:ring-blue-500 transition-all appearance-none">
+                    <option value="">Select Subject</option>
                     {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
-                  <select value={taskType} onChange={e => setTaskType(e.target.value)} className="w-full p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-bold outline-none shadow-sm">
-                    <option value="">Task Type</option>
+                  <select value={taskType} onChange={e => setTaskType(e.target.value)} className="w-full p-5 rounded-2xl border border-slate-700 bg-slate-800/50 font-bold outline-none shadow-xl focus:ring-2 focus:ring-blue-500 transition-all appearance-none">
+                    <option value="">Select Task Type</option>
                     {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
-                  <button onClick={() => (subject && taskType) ? setStarted(true) : setError('Select options')} className="w-full bg-blue-600 text-white rounded-2xl py-5 text-lg font-bold shadow-xl active:scale-95 transition-all">Start Session</button>
+                  <button onClick={() => (subject && taskType) ? setStarted(true) : setError('Select options')} className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-2xl py-5 text-xl font-black shadow-2xl active:scale-95 transition-all">Start Learning</button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* CHAT DISPLAY */}
+          {/* CHAT DISPLAY (No white background) */}
           <div className="flex-1 overflow-y-auto p-8 space-y-12 pb-48">
-            <div className="max-w-4xl mx-auto space-y-10">
+            <div className="max-w-4xl mx-auto space-y-12">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] rounded-[2rem] px-8 py-6 text-lg leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700'}`}>
+                  <div className={`max-w-[85%] rounded-[2.5rem] px-10 py-7 text-xl leading-relaxed shadow-2xl ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-100 border border-slate-700/50'}`}>
                     <p className="whitespace-pre-wrap">{msg.content}</p>
                   </div>
                 </div>
               ))}
               {loading && (
                 <div className="flex items-center gap-4">
-                  <div className="text-base font-bold text-blue-500 animate-pulse px-6 py-3 bg-blue-50 dark:bg-blue-900/20 rounded-full">Tutor is thinking...</div>
-                  <button onClick={handleStop} className="p-3 text-red-500 hover:bg-red-50 rounded-full"><StopCircle size={24} /></button>
+                  <div className="text-lg font-bold text-blue-400 animate-pulse px-8 py-4 bg-blue-900/20 border border-blue-500/20 rounded-full">Assistant is processing...</div>
+                  <button onClick={handleStop} className="p-3 text-red-400 hover:bg-red-500/10 rounded-full transition-colors"><StopCircle size={28} /></button>
                 </div>
               )}
             </div>
           </div>
 
-          {/* INPUT BAR */}
-          <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-[#f8fafc] dark:from-[#0f172a] via-[#f8fafc]/80 to-transparent z-30">
+          {/* INPUT AREA */}
+          <div className="absolute bottom-0 left-0 right-0 p-10 bg-gradient-to-t from-[#0f172a] via-[#0f172a]/90 to-transparent z-30">
             <div className="max-w-4xl mx-auto space-y-4">
               {attachedFile && (
-                <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 rounded-2xl w-fit">
-                  {attachedFile.type === 'pdf' ? <FileText size={18} /> : <ImageIcon size={18} />}
-                  <span className="text-xs font-bold uppercase">{attachedFile.name}</span>
-                  <button onClick={() => setAttachedFile(null)} className="hover:text-red-500 transition-colors"><X size={18} /></button>
+                <div className="flex items-center gap-3 p-3 bg-blue-900/30 border border-blue-500/30 rounded-2xl w-fit backdrop-blur-sm">
+                  {attachedFile.type === 'pdf' ? <FileText size={20} className="text-blue-400" /> : <ImageIcon size={20} className="text-blue-400" />}
+                  <span className="text-xs font-black uppercase tracking-tighter">{attachedFile.name}</span>
+                  <button onClick={() => setAttachedFile(null)} className="hover:text-red-400"><X size={20} /></button>
                 </div>
               )}
-              <div className="flex gap-4 items-end bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-[2.5rem] p-4 shadow-2xl focus-within:ring-4 focus-within:ring-blue-500/10 transition-all">
+              <div className="flex gap-4 items-end bg-slate-800 border border-slate-700/50 rounded-[3rem] p-5 shadow-2xl focus-within:ring-2 focus-within:ring-blue-500/50 transition-all">
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*,.pdf" className="hidden" />
-                <button onClick={() => fileInputRef.current?.click()} className="p-3 text-slate-400 hover:text-blue-500 transition-colors"><Paperclip size={24} /></button>
-                <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} placeholder="Ask your tutor anything..." className="flex-1 bg-transparent border-none p-3 text-lg focus:outline-none resize-none max-h-48 dark:text-white" rows={1} />
-                <button onClick={handleSend} disabled={loading || (!input.trim() && !attachedFile)} className="bg-slate-900 dark:bg-blue-600 text-white rounded-full p-4 active:scale-95 transition-all shadow-lg">
-                  <Send size={24} />
+                <button onClick={() => fileInputRef.current?.click()} className="p-4 text-slate-400 hover:text-blue-400 transition-colors"><Paperclip size={28} /></button>
+                <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} placeholder="Message your IB Tutor..." className="flex-1 bg-transparent border-none py-4 text-xl focus:outline-none resize-none max-h-56 text-white placeholder-slate-500" rows={1} />
+                <button onClick={handleSend} disabled={loading || (!input.trim() && !attachedFile)} className="bg-blue-600 hover:bg-blue-500 text-white rounded-full p-5 active:scale-90 transition-all shadow-xl disabled:opacity-30">
+                  <Send size={28} />
                 </button>
               </div>
             </div>
