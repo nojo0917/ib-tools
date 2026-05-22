@@ -209,16 +209,16 @@ export default function GeneratePage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-[#0f172a] text-slate-100 overflow-hidden font-sans">
+    <div className="h-screen flex flex-col bg-[#0f172a] text-slate-100 overflow-hidden">
       
-      {/* FLOATING PILL NAVBAR CONTAINER */}
-      <header className="w-full pt-6 px-12 shrink-0 z-50">
-        <div className="max-w-[1600px] mx-auto h-16 bg-[#1e293b]/50 backdrop-blur-xl border border-slate-700/50 rounded-full px-8 flex items-center justify-between shadow-2xl">
+      {/* NAVBAR: MATCHING SCREENSHOT REFERENCE */}
+      <nav className="w-full px-10 pt-6 shrink-0 z-50">
+        <div className="w-full h-[70px] bg-[#1e293b]/30 border border-slate-800/60 rounded-full px-10 flex items-center justify-between backdrop-blur-sm">
           
-          {/* Left: Sidebar Toggle + Logo */}
+          {/* Logo & Toggle Section */}
           <div className="flex items-center gap-6">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-700 rounded-full transition-colors">
-              {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 hover:bg-slate-800 rounded-lg transition-colors">
+              <ChevronLeft size={20} className={sidebarOpen ? "" : "rotate-180"} />
             </button>
             <Link href="/home">
               <span className="text-xl font-bold text-white tracking-tight" style={{ fontFamily: 'Georgia, serif' }}>
@@ -227,17 +227,17 @@ export default function GeneratePage() {
             </Link>
           </div>
 
-          {/* Center: The Navigation Pill Links */}
-          <div className="hidden md:flex items-center gap-1 bg-[#0f172a]/40 border border-slate-700/30 rounded-2xl p-1">
+          {/* Navigation Pill (The inner pill) */}
+          <div className="flex items-center gap-1 bg-[#0f172a]/50 border border-slate-700/50 rounded-2xl p-1">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
               return (
                 <Link 
                   key={link.href} 
                   href={link.href} 
-                  className={`px-5 py-1.5 rounded-xl text-sm font-bold transition-all ${
+                  className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${
                     isActive 
-                      ? 'bg-slate-700/60 text-blue-400 shadow-lg border border-slate-600/50' 
+                      ? 'bg-slate-700/80 text-blue-400 shadow-lg' 
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -247,14 +247,14 @@ export default function GeneratePage() {
             })}
           </div>
 
-          {/* Right: Logout Button */}
-          <button onClick={handleLogout} className="text-xs font-black uppercase tracking-widest text-slate-500 hover:text-red-400 transition-colors px-2">
-            Logout
+          {/* Logout Section */}
+          <button onClick={handleLogout} className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-red-400 transition-colors">
+            LOGOUT
           </button>
         </div>
-      </header>
+      </nav>
 
-      <div className="flex flex-1 overflow-hidden mt-4">
+      <div className="flex flex-1 overflow-hidden mt-2">
         {/* SIDEBAR */}
         {sidebarOpen && (
           <aside className="w-72 border-r border-slate-800 bg-[#0f172a] flex flex-col shrink-0">
@@ -272,7 +272,6 @@ export default function GeneratePage() {
                   </div>
                   <p className="text-[10px] text-slate-500 truncate mt-0.5">{gen.task_type}</p>
                   
-                  {/* SIDEBAR ACTIONS */}
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-1 bg-slate-800 p-1 rounded-lg border border-slate-700 shadow-xl">
                     <button onClick={(e) => { e.stopPropagation(); togglePin(gen.id, !!gen.metadata?.pinned) }} className="p-1 hover:text-blue-400"><Pin size={12} /></button>
                     <button onClick={(e) => { e.stopPropagation(); renameChat(gen.id) }} className="p-1 hover:text-emerald-400"><Edit2 size={12} /></button>
@@ -304,7 +303,7 @@ export default function GeneratePage() {
             </div>
           )}
 
-          {/* CHAT DISPLAY (No white background) */}
+          {/* CHAT DISPLAY */}
           <div className="flex-1 overflow-y-auto p-8 space-y-12 pb-48">
             <div className="max-w-4xl mx-auto space-y-12">
               {messages.map((msg, i) => (
