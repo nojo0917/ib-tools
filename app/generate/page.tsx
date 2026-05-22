@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { 
   Paperclip, X, Image as ImageIcon, FileText, 
@@ -43,8 +43,18 @@ export default function GeneratePage() {
   
   const abortControllerRef = useRef<AbortController | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+  const pathname = usePathname()
   const supabase = createClient()
+
+  const navLinks = [
+    { name: 'Home', href: '/home' },
+    { name: 'Generate', href: '/generate' },
+    { name: 'AI Check', href: '/ai-check' },
+    { name: 'AI Polish', href: '/ai-polish' }, 
+    { name: 'Practice Papers', href: '/practice-papers' },
+  ]
 
   useEffect(() => { loadHistory() }, [])
 
@@ -83,7 +93,6 @@ export default function GeneratePage() {
     return text.replace(/\*\*/g, '').replace(/\|/g, '').replace(/---/g, '').replace(/#/g, '').trim();
   }
 
-  // --- FILE HANDLING LOGIC ---
   const processFile = (file: File) => {
     const reader = new FileReader()
     if (file.type === "application/pdf") {
@@ -100,7 +109,6 @@ export default function GeneratePage() {
     if (file) processFile(file);
   };
 
-  // --- SIDEBAR ACTIONS ---
   const togglePin = async (id: string, currentPinned: boolean) => {
     const { data: existing } = await supabase.from('generations').select('metadata').eq('id', id).single()
     const newMetadata = { ...(existing?.metadata || {}), pinned: !currentPinned }
@@ -109,7 +117,7 @@ export default function GeneratePage() {
   }
 
   const renameChat = async (id: string) => {
-    const newLabel = prompt("Rename this chat session:")
+    const newLabel = prompt("Enter new session name:")
     if (!newLabel) return
     const { data: existing } = await supabase.from('generations').select('metadata').eq('id', id).single()
     const newMetadata = { ...(existing?.metadata || {}), label: newLabel }
@@ -204,24 +212,50 @@ export default function GeneratePage() {
   return (
     <div className="h-screen flex flex-col bg-[#f8fafc] dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 overflow-hidden">
       
-      {/* FLOATING PILL NAVBAR */}
-      <div className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
-        <nav className="w-full max-w-[1200px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-slate-800 h-14 rounded-full flex items-center justify-between px-6 shadow-xl pointer-events-auto">
+      {/* NAVBAR (Matching Attachment 2) */}
+      <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 shrink-0 z-50">
+        <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
+          
+          {/* Logo Section */}
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
               {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
             </button>
-            <Link href="/home" className="text-lg font-bold text-slate-900 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
-              IB Study Tools
+            <Link href="/home">
+              <span className="text-xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
+                IB Study Tools
+              </span>
             </Link>
           </div>
-          <button onClick={handleLogout} className="text-xs font-bold text-slate-400 hover:text-red-500 transition-colors">
+
+          {/* Navigation Pill (Centered) */}
+          <div className="hidden md:flex items-center gap-1 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-1">
+            {navLinks.map((link) => {
+              const isActive = pathname === link.href;
+              return (
+                <Link 
+                  key={link.href} 
+                  href={link.href} 
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                    isActive 
+                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' 
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {link.name}
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Logout Section */}
+          <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-red-500 transition">
             Logout
           </button>
-        </nav>
-      </div>
+        </div>
+      </nav>
 
-      <div className="flex flex-1 pt-24 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
         {/* SIDEBAR */}
         {sidebarOpen && (
           <aside className="w-72 border-r border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 flex flex-col shrink-0">
@@ -239,8 +273,8 @@ export default function GeneratePage() {
                   </div>
                   <p className="text-[10px] text-slate-400 truncate mt-0.5">{gen.task_type}</p>
                   
-                  {/* SIDEBAR ACTIONS HOVER */}
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-1 bg-white dark:bg-slate-800 p-1 rounded-md shadow-sm border border-slate-100 dark:border-slate-700">
+                  {/* SIDEBAR ACTIONS */}
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-1 bg-white dark:bg-slate-800 p-1 rounded-md shadow-sm border border-slate-200 dark:border-slate-700">
                     <button onClick={(e) => { e.stopPropagation(); togglePin(gen.id, !!gen.metadata?.pinned) }} className="p-1 hover:text-blue-500"><Pin size={12} /></button>
                     <button onClick={(e) => { e.stopPropagation(); renameChat(gen.id) }} className="p-1 hover:text-green-500"><Edit2 size={12} /></button>
                     <button onClick={(e) => { e.stopPropagation(); handleDelete(gen.id) }} className="p-1 hover:text-red-500"><Trash2 size={12} /></button>
@@ -251,7 +285,7 @@ export default function GeneratePage() {
           </aside>
         )}
 
-        <main className="flex-1 flex flex-col relative overflow-hidden">
+        <main className="flex-1 flex flex-col relative overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a]">
           {!started && (
             <div className="absolute inset-0 flex items-center justify-center p-8 z-40 bg-[#f8fafc] dark:bg-[#0f172a]">
               <div className="max-w-lg w-full space-y-8 text-center">
@@ -265,7 +299,8 @@ export default function GeneratePage() {
                     <option value="">Task Type</option>
                     {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
-                  <button onClick={() => (subject && taskType) ? setStarted(true) : setError('Select options')} className="w-full bg-blue-600 text-white rounded-2xl py-5 text-lg font-bold shadow-xl">Start Session</button>
+                  <button onClick={() => (subject && taskType) ? setStarted(true) : setError('Select options')} className="w-full bg-blue-600 text-white rounded-2xl py-5 text-lg font-bold shadow-xl active:scale-95 transition-all">Start Session</button>
+                  {error && <p className="text-red-500 text-xs font-bold uppercase tracking-widest">{error}</p>}
                 </div>
               </div>
             </div>
@@ -297,13 +332,13 @@ export default function GeneratePage() {
                 <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 rounded-2xl w-fit">
                   {attachedFile.type === 'pdf' ? <FileText size={18} /> : <ImageIcon size={18} />}
                   <span className="text-xs font-bold uppercase">{attachedFile.name}</span>
-                  <button onClick={() => setAttachedFile(null)} className="hover:text-red-500"><X size={18} /></button>
+                  <button onClick={() => setAttachedFile(null)} className="hover:text-red-500 transition-colors"><X size={18} /></button>
                 </div>
               )}
               <div className="flex gap-4 items-end bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-[2.5rem] p-4 shadow-2xl focus-within:ring-4 focus-within:ring-blue-500/10 transition-all">
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*,.pdf" className="hidden" />
                 <button onClick={() => fileInputRef.current?.click()} className="p-3 text-slate-400 hover:text-blue-500 transition-colors"><Paperclip size={24} /></button>
-                <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} placeholder="Ask your tutor anything..." className="flex-1 bg-transparent border-none p-3 text-lg focus:outline-none resize-none max-h-48" rows={1} />
+                <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} placeholder="Ask your tutor anything..." className="flex-1 bg-transparent border-none p-3 text-lg focus:outline-none resize-none max-h-48 dark:text-white" rows={1} />
                 <button onClick={handleSend} disabled={loading || (!input.trim() && !attachedFile)} className="bg-slate-900 dark:bg-blue-600 text-white rounded-full p-4 active:scale-95 transition-all shadow-lg">
                   <Send size={24} />
                 </button>
