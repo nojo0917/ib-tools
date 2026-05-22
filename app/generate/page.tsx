@@ -43,7 +43,6 @@ export default function GeneratePage() {
   
   const abortControllerRef = useRef<AbortController | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const bottomRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
@@ -212,12 +211,12 @@ export default function GeneratePage() {
   return (
     <div className="h-screen flex flex-col bg-[#f8fafc] dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 overflow-hidden">
       
-      {/* NAVBAR (Matching Attachment 2) */}
+      {/* NAVBAR (Re-aligned to match AI Polish exactly) */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 shrink-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-8 h-16 flex items-center justify-between">
           
           {/* Logo Section */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
               {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
             </button>
@@ -249,9 +248,11 @@ export default function GeneratePage() {
           </div>
 
           {/* Logout Section */}
-          <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-red-500 transition">
-            Logout
-          </button>
+          <div className="flex items-center">
+            <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-red-500 transition">
+              Logout
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -273,7 +274,6 @@ export default function GeneratePage() {
                   </div>
                   <p className="text-[10px] text-slate-400 truncate mt-0.5">{gen.task_type}</p>
                   
-                  {/* SIDEBAR ACTIONS */}
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-1 bg-white dark:bg-slate-800 p-1 rounded-md shadow-sm border border-slate-200 dark:border-slate-700">
                     <button onClick={(e) => { e.stopPropagation(); togglePin(gen.id, !!gen.metadata?.pinned) }} className="p-1 hover:text-blue-500"><Pin size={12} /></button>
                     <button onClick={(e) => { e.stopPropagation(); renameChat(gen.id) }} className="p-1 hover:text-green-500"><Edit2 size={12} /></button>
@@ -300,7 +300,6 @@ export default function GeneratePage() {
                     {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                   <button onClick={() => (subject && taskType) ? setStarted(true) : setError('Select options')} className="w-full bg-blue-600 text-white rounded-2xl py-5 text-lg font-bold shadow-xl active:scale-95 transition-all">Start Session</button>
-                  {error && <p className="text-red-500 text-xs font-bold uppercase tracking-widest">{error}</p>}
                 </div>
               </div>
             </div>
