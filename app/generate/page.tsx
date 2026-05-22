@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { 
   Paperclip, X, Image as ImageIcon, FileText, 
   ChevronLeft, ChevronRight, Plus, Send, StopCircle,
-  Pin, Edit2, Trash2, MoreVertical
+  Pin, Edit2, Trash2
 } from 'lucide-react'
 
 const SUBJECTS = [
@@ -83,6 +83,7 @@ export default function GeneratePage() {
     return text.replace(/\*\*/g, '').replace(/\|/g, '').replace(/---/g, '').replace(/#/g, '').trim();
   }
 
+  // --- FILE HANDLING LOGIC ---
   const processFile = (file: File) => {
     const reader = new FileReader()
     if (file.type === "application/pdf") {
@@ -94,6 +95,12 @@ export default function GeneratePage() {
     }
   }
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+  };
+
+  // --- SIDEBAR ACTIONS ---
   const togglePin = async (id: string, currentPinned: boolean) => {
     const { data: existing } = await supabase.from('generations').select('metadata').eq('id', id).single()
     const newMetadata = { ...(existing?.metadata || {}), pinned: !currentPinned }
@@ -102,7 +109,7 @@ export default function GeneratePage() {
   }
 
   const renameChat = async (id: string) => {
-    const newLabel = prompt("Enter new name:")
+    const newLabel = prompt("Rename this chat session:")
     if (!newLabel) return
     const { data: existing } = await supabase.from('generations').select('metadata').eq('id', id).single()
     const newMetadata = { ...(existing?.metadata || {}), label: newLabel }
@@ -111,7 +118,7 @@ export default function GeneratePage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this chat?')) return
+    if (!confirm('Delete this session?')) return
     await supabase.from('generations').delete().eq('id', id)
     if (currentChatId === id) handleNew()
     loadHistory()
@@ -195,11 +202,11 @@ export default function GeneratePage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-[#f8fafc] dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 overflow-hidden font-sans">
+    <div className="h-screen flex flex-col bg-[#f8fafc] dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 overflow-hidden">
       
-      {/* PILL NAVBAR (Matching AI Polish) */}
+      {/* FLOATING PILL NAVBAR */}
       <div className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
-        <nav className="w-full max-w-[1200px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-slate-800 h-14 rounded-full flex items-center justify-between px-6 shadow-2xl pointer-events-auto">
+        <nav className="w-full max-w-[1200px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-slate-800 h-14 rounded-full flex items-center justify-between px-6 shadow-xl pointer-events-auto">
           <div className="flex items-center gap-4">
             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
               {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
@@ -226,14 +233,14 @@ export default function GeneratePage() {
             <div className="flex-1 overflow-y-auto px-2 space-y-1">
               {history.map(gen => (
                 <div key={gen.id} className={`group relative w-full p-3 rounded-xl transition-all border border-transparent flex flex-col cursor-pointer ${currentChatId === gen.id ? 'bg-white dark:bg-slate-800 shadow-sm border-slate-200 dark:border-slate-700' : 'hover:bg-slate-200/50 dark:hover:bg-slate-800/50'}`} onClick={() => loadGeneration(gen)}>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold truncate flex-1 pr-2">{gen.metadata?.label || gen.subject}</p>
+                  <div className="flex items-center justify-between pr-8">
+                    <p className="text-xs font-bold truncate">{gen.metadata?.label || gen.subject}</p>
                     {gen.metadata?.pinned && <Pin size={10} className="text-blue-500 fill-blue-500" />}
                   </div>
                   <p className="text-[10px] text-slate-400 truncate mt-0.5">{gen.task_type}</p>
                   
-                  {/* SIDEBAR ACTIONS */}
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-1 bg-white dark:bg-slate-800 p-1 rounded-md shadow-sm">
+                  {/* SIDEBAR ACTIONS HOVER */}
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-1 bg-white dark:bg-slate-800 p-1 rounded-md shadow-sm border border-slate-100 dark:border-slate-700">
                     <button onClick={(e) => { e.stopPropagation(); togglePin(gen.id, !!gen.metadata?.pinned) }} className="p-1 hover:text-blue-500"><Pin size={12} /></button>
                     <button onClick={(e) => { e.stopPropagation(); renameChat(gen.id) }} className="p-1 hover:text-green-500"><Edit2 size={12} /></button>
                     <button onClick={(e) => { e.stopPropagation(); handleDelete(gen.id) }} className="p-1 hover:text-red-500"><Trash2 size={12} /></button>
@@ -248,7 +255,7 @@ export default function GeneratePage() {
           {!started && (
             <div className="absolute inset-0 flex items-center justify-center p-8 z-40 bg-[#f8fafc] dark:bg-[#0f172a]">
               <div className="max-w-lg w-full space-y-8 text-center">
-                <h2 className="text-5xl font-black tracking-tight">Tutor Mode</h2>
+                <h2 className="text-5xl font-black">Tutor Mode</h2>
                 <div className="space-y-4">
                   <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-bold outline-none appearance-none shadow-sm">
                     <option value="">Subject</option>
@@ -258,18 +265,18 @@ export default function GeneratePage() {
                     <option value="">Task Type</option>
                     {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
-                  <button onClick={() => (subject && taskType) ? setStarted(true) : setError('Select options')} className="w-full bg-blue-600 text-white rounded-2xl py-5 text-lg font-bold shadow-xl active:scale-[0.98] transition-all">Start Session</button>
+                  <button onClick={() => (subject && taskType) ? setStarted(true) : setError('Select options')} className="w-full bg-blue-600 text-white rounded-2xl py-5 text-lg font-bold shadow-xl">Start Session</button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* CHAT DISPLAY (No white background container) */}
+          {/* CHAT DISPLAY */}
           <div className="flex-1 overflow-y-auto p-8 space-y-12 pb-48">
             <div className="max-w-4xl mx-auto space-y-10">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] rounded-[2rem] px-8 py-6 text-lg leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white shadow-blue-500/20' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700'}`}>
+                  <div className={`max-w-[85%] rounded-[2rem] px-8 py-6 text-lg leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700'}`}>
                     <p className="whitespace-pre-wrap">{msg.content}</p>
                   </div>
                 </div>
@@ -283,7 +290,7 @@ export default function GeneratePage() {
             </div>
           </div>
 
-          {/* FLOATING INPUT BAR */}
+          {/* INPUT BAR */}
           <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-[#f8fafc] dark:from-[#0f172a] via-[#f8fafc]/80 to-transparent z-30">
             <div className="max-w-4xl mx-auto space-y-4">
               {attachedFile && (
@@ -297,7 +304,7 @@ export default function GeneratePage() {
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*,.pdf" className="hidden" />
                 <button onClick={() => fileInputRef.current?.click()} className="p-3 text-slate-400 hover:text-blue-500 transition-colors"><Paperclip size={24} /></button>
                 <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} placeholder="Ask your tutor anything..." className="flex-1 bg-transparent border-none p-3 text-lg focus:outline-none resize-none max-h-48" rows={1} />
-                <button onClick={handleSend} disabled={loading || (!input.trim() && !attachedFile)} className="bg-slate-900 dark:bg-blue-600 text-white rounded-full p-4 disabled:opacity-20 active:scale-95 transition-all shadow-lg">
+                <button onClick={handleSend} disabled={loading || (!input.trim() && !attachedFile)} className="bg-slate-900 dark:bg-blue-600 text-white rounded-full p-4 active:scale-95 transition-all shadow-lg">
                   <Send size={24} />
                 </button>
               </div>
