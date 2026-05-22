@@ -211,12 +211,12 @@ export default function GeneratePage() {
   return (
     <div className="h-screen flex flex-col bg-[#f8fafc] dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 overflow-hidden">
       
-      {/* NAVBAR (Re-aligned to match AI Polish exactly) */}
-      <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 shrink-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-8 h-16 flex items-center justify-between">
+      {/* NAVBAR (Exactly matching AI Check/Polish Layout) */}
+      <nav className="w-full bg-white dark:bg-[#0f172a] border-b border-slate-100 dark:border-slate-800 shrink-0 z-50">
+        <div className="w-full px-12 h-16 flex items-center justify-between">
           
-          {/* Logo Section */}
-          <div className="flex items-center gap-6">
+          {/* Left: Sidebar Toggle + Logo */}
+          <div className="flex items-center gap-8">
             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
               {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
             </button>
@@ -227,8 +227,8 @@ export default function GeneratePage() {
             </Link>
           </div>
 
-          {/* Navigation Pill (Centered) */}
-          <div className="hidden md:flex items-center gap-1 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-1">
+          {/* Center: Navigation Pill */}
+          <div className="flex items-center gap-1 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-1">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
               return (
@@ -247,19 +247,17 @@ export default function GeneratePage() {
             })}
           </div>
 
-          {/* Logout Section */}
-          <div className="flex items-center">
-            <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-red-500 transition">
-              Logout
-            </button>
-          </div>
+          {/* Right: Logout */}
+          <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-red-500 transition">
+            Logout
+          </button>
         </div>
       </nav>
 
       <div className="flex flex-1 overflow-hidden">
         {/* SIDEBAR */}
         {sidebarOpen && (
-          <aside className="w-72 border-r border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 flex flex-col shrink-0">
+          <aside className="w-72 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col shrink-0">
             <div className="p-4">
               <button onClick={handleNew} className="w-full bg-slate-900 dark:bg-blue-600 text-white rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-md">
                 <Plus size={16} /> New Session
@@ -291,11 +289,11 @@ export default function GeneratePage() {
               <div className="max-w-lg w-full space-y-8 text-center">
                 <h2 className="text-5xl font-black">Tutor Mode</h2>
                 <div className="space-y-4">
-                  <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-bold outline-none appearance-none shadow-sm">
+                  <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-bold outline-none shadow-sm">
                     <option value="">Subject</option>
                     {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
-                  <select value={taskType} onChange={e => setTaskType(e.target.value)} className="w-full p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-bold outline-none appearance-none shadow-sm">
+                  <select value={taskType} onChange={e => setTaskType(e.target.value)} className="w-full p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-bold outline-none shadow-sm">
                     <option value="">Task Type</option>
                     {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
