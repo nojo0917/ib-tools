@@ -211,17 +211,21 @@ export default function GeneratePage() {
   return (
     <div className="h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300 overflow-hidden">
       
-      {/* NAVBAR: COPIED EXACTLY FROM REFERENCE CODE */}
+      {/* NAVBAR: ALIGNMENT ADJUSTED TO MATCH AI POLISH EXACTLY */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
-            {/* Sidebar Toggle Integrated into Logo area to maintain spacing */}
+            {/* 1. Sidebar Toggle Button */}
             <button 
               onClick={() => setSidebarOpen(!sidebarOpen)} 
-              className="p-2 mr-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 mr-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
             >
               {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
             </button>
+            
+            {/* 2. The Spacer (Matching the w-14 from reference to push Logo right) */}
+            <div className="w-6 shrink-0" aria-hidden="true" />
+            
             <Link href="/home">
               <span 
                 className="text-xl font-bold text-blue-600 dark:text-white" 
