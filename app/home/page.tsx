@@ -91,7 +91,7 @@ export default function HomePage() {
             { 
               title: 'Practice Papers', 
               emoji: '📄', 
-              desc: 'Browse and download exam-style practice papers and official archives by subject.',
+              desc: 'Browse exam-style practice papers from Save My Exam and model answers by subject.',
               link: '/practice-papers',
               cta: 'Browse papers'
             }
