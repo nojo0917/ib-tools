@@ -63,7 +63,7 @@ export default function LoginPage() {
             IB Study Tools
           </h1>
           <p className="text-slate-500 font-medium text-xs uppercase tracking-[0.15em]">
-            {isLoginMode ? 'Academic Portal' : 'Create an Account'}
+            {isLoginMode ? 'Sign in' : 'Create an Account'}
           </p>
         </div>
 
