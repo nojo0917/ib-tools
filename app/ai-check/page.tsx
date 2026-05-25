@@ -167,14 +167,31 @@ export default function AICheckPage() {
             </div>
           )}
 
-          {/* --- LEGAL FOOTER --- */}
-          <footer className="mt-12 pt-10 border-t border-slate-100 dark:border-slate-800 text-center space-y-4">
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium leading-relaxed max-w-2xl mx-auto">
-              <span className="block font-bold mb-1 uppercase tracking-wider text-slate-500 dark:text-slate-400">Legal Disclaimer</span>
-              This tool provides a statistical analysis powered by the <strong>Sapling.ai API</strong>. 
-              IB Study Tools is not affiliated with Sapling Intelligence. AI detection is not 100% accurate; results should be used as a general guide and not as definitive proof of academic misconduct.
-            </p>
+{/* --- LEGAL DISCLAIMER FOOTER --- */}
+<footer className="mt-12 pt-10 border-t border-slate-100 dark:border-slate-800 text-center">
+            <div className="max-w-2xl mx-auto space-y-4">
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium leading-relaxed">
+                <span className="block font-bold mb-1 uppercase tracking-wider text-slate-500 dark:text-slate-400">Legal Disclaimer</span>
+                AI detection results are probabilistic and intended for educational guidance only. 
+                This feature utilizes the 
+                <a 
+                  href="https://sapling.ai" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-blue-500 hover:text-blue-600 dark:text-blue-400 hover:underline mx-1 font-bold"
+                >
+                  Sapling.ai API
+                </a> 
+                to analyze content.
+              </p>
+              
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 italic leading-relaxed">
+                IB Study Tools is an independent educational resource and is <strong>not officially affiliated with, endorsed by, or sponsored by Sapling Intelligence (Sapling.ai)</strong>. 
+                The accuracy of AI detection can vary and should not be used as sole evidence for academic integrity decisions.
+              </p>
+            </div>
           </footer>
+
         </div>
       </main>
     </div>
