@@ -13,10 +13,23 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Comprehensive SEO Metadata
+// UPDATED: Comprehensive SEO Metadata to remove "Vercel" and add custom branding
 export const metadata: Metadata = {
-  title: "IB Study Tools | AI Tutor, Practice Papers & AI Checker",
-  description: "The all-in-one AI toolkit for IB students: AI Tutor, Exam Checker, AI Polisher, and custom Practice Papers. Built by an IB student to help you excel.",
+  title: {
+    default: "IB Study Tools",
+    template: "%s | IB Study Tools",
+  },
+  description: "The all-in-one AI toolkit for IB students: AI Tutor, AI Check, AI Polisher, and Practice Papers. Built by an IB student to help you excel.",
+  // This helps search engines identify your brand name
+  applicationName: 'IB Study Tools',
+  authors: [{ name: 'IB Student' }],
+  keywords: ['IB', 'International Baccalaureate', 'AI Tutor', 'AI Checker', 'IA Help'],
+  // This is where you link your custom logo for the browser tab/Google
+  icons: {
+    icon: "/favicon.ico", // Ensure you upload your logo to /public/favicon.ico
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png", // Optional: your logo for iPhone home screens
+  },
 };
 
 export default function RootLayout({
@@ -35,6 +48,8 @@ export default function RootLayout({
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
         />
+        {/* Forces the tab title even on older browsers */}
+        <title>IB Study Tools</title>
       </head>
       <body className="min-h-screen flex flex-col bg-background text-foreground">
         <ThemeProvider
