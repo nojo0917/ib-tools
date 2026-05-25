@@ -211,20 +211,19 @@ export default function GeneratePage() {
   return (
     <div className="h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300 overflow-hidden">
       
-      {/* NAVBAR: ALIGNMENT ADJUSTED TO MATCH AI POLISH EXACTLY */}
+      {/* --- NAVBAR: EXACT MATCH TO AI CHECK --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
-            {/* 1. Sidebar Toggle Button */}
-            <button 
-              onClick={() => setSidebarOpen(!sidebarOpen)} 
-              className="p-2 mr-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-            >
-              {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-            </button>
-            
-            {/* 2. The Spacer (Matching the w-14 from reference to push Logo right) */}
-            <div className="w-6 shrink-0" aria-hidden="true" />
+            {/* The w-14 spacer matches AI Check, but we put the Sidebar Toggle inside it to save space */}
+            <div className="w-14 shrink-0 flex items-center" aria-hidden="true">
+               <button 
+                onClick={() => setSidebarOpen(!sidebarOpen)} 
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-400"
+              >
+                {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+              </button>
+            </div>
             
             <Link href="/home">
               <span 
