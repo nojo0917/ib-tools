@@ -2,12 +2,13 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Send, Loader2 } from 'lucide-react'
+import { ArrowLeft, Send, Loader2, Plus, List } from 'lucide-react'
 
 export default function UploadPage() {
   const [loading, setLoading] = useState(false)
   const [fetchingSubjects, setFetchingSubjects] = useState(true)
   const [subjects, setSubjects] = useState<string[]>([])
+  const [isNewSubject, setIsNewSubject] = useState(false) // Toggle for new subject
   const [message, setMessage] = useState({ text: '', type: '' })
   
   const [formData, setFormData] = useState({
@@ -23,26 +24,20 @@ export default function UploadPage() {
   const supabase = createClient()
   const router = useRouter()
 
-  // Fetch unique subjects from your database on load
   useEffect(() => {
     const fetchSubjects = async () => {
-      const { data, error } = await supabase
-        .from('past_papers')
-        .select('subject')
-      
+      const { data, error } = await supabase.from('past_papers').select('subject')
       if (!error && data) {
-        // Filter for unique subject names and sort alphabetically
         const uniqueSubjects = Array.from(new Set(data.map(item => item.subject))).sort()
         setSubjects(uniqueSubjects)
-        
-        // Auto-select the first subject if available
         if (uniqueSubjects.length > 0) {
           setFormData(prev => ({ ...prev, subject: uniqueSubjects[0] }))
+        } else {
+          setIsNewSubject(true) // If DB is empty, default to manual typing
         }
       }
       setFetchingSubjects(false)
     }
-
     fetchSubjects()
   }, [supabase])
 
@@ -73,11 +68,26 @@ export default function UploadPage() {
         </button>
 
         <div className="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-slate-800">
-          <div className="mb-8">
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
-              Add New Resource
-            </h1>
-            <p className="text-slate-500 font-medium text-sm mt-1">Select an existing subject to add a paper.</p>
+          <div className="flex justify-between items-start mb-8">
+            <div>
+              <h1 className="text-3xl font-black text-slate-900 dark:text-white" style={{ fontFamily: 'Georgia, serif' }}>
+                Add New Resource
+              </h1>
+              <p className="text-slate-500 font-medium text-sm mt-1">
+                {isNewSubject ? "Type a new subject name below." : "Select a subject from your archive."}
+              </p>
+            </div>
+            
+            {/* Toggle Button */}
+            <button
+              onClick={() => {
+                setIsNewSubject(!isNewSubject)
+                setFormData(prev => ({ ...prev, subject: isNewSubject && subjects.length > 0 ? subjects[0] : '' }))
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-bold transition-all"
+            >
+              {isNewSubject ? <><List size={14} /> Use Existing</> : <><Plus size={14} /> Add New Subject</>}
+            </button>
           </div>
 
           {message.text && (
@@ -90,25 +100,29 @@ export default function UploadPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-2 gap-4">
-              {/* SUBJECT SELECTOR */}
               <div className="space-y-2">
                 <label className="text-[10px] uppercase tracking-widest font-black text-slate-400 ml-2">Subject</label>
+                
                 {fetchingSubjects ? (
-                  <div className="w-full bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 flex items-center gap-2 text-slate-400 text-sm">
-                    <Loader2 size={16} className="animate-spin" /> Loading subjects...
+                  <div className="w-full bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 flex items-center gap-2 text-slate-400 text-sm italic">
+                    <Loader2 size={16} className="animate-spin" /> Syncing...
                   </div>
+                ) : isNewSubject ? (
+                  <input
+                    required
+                    placeholder="e.g. Physics HL"
+                    value={formData.subject}
+                    onChange={e => setFormData({...formData, subject: e.target.value})}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500 transition-all text-slate-900 dark:text-white animate-in fade-in zoom-in-95 duration-200"
+                  />
                 ) : (
                   <select
                     required
                     value={formData.subject}
                     onChange={e => setFormData({...formData, subject: e.target.value})}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500 transition-all appearance-none text-slate-900 dark:text-white"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500 transition-all text-slate-900 dark:text-white"
                   >
-                    {subjects.length > 0 ? (
-                      subjects.map(s => <option key={s} value={s}>{s}</option>)
-                    ) : (
-                      <option disabled>No subjects found</option>
-                    )}
+                    {subjects.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 )}
               </div>
@@ -141,7 +155,7 @@ export default function UploadPage() {
               <select
                 value={formData.paper_type}
                 onChange={e => setFormData({...formData, paper_type: e.target.value})}
-                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500 transition-all appearance-none text-slate-900 dark:text-white"
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500 transition-all text-slate-900 dark:text-white"
               >
                 <option>Paper 1</option>
                 <option>Paper 2</option>
@@ -178,11 +192,7 @@ export default function UploadPage() {
               disabled={loading || fetchingSubjects}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl py-4 font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all disabled:opacity-50 mt-4 flex items-center justify-center gap-2"
             >
-              {loading ? 'Publishing...' : (
-                <>
-                  Publish Entry <Send size={18} />
-                </>
-              )}
+              {loading ? 'Publishing...' : <><Send size={18} /> Publish Entry</>}
             </button>
           </form>
         </div>
