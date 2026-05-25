@@ -77,7 +77,7 @@ export default function HomePage() {
             { 
               title: 'AI Check', 
               emoji: '🔍', 
-              desc: 'Find out how likely any text is to be AI-generated with scores from multiple detectors.',
+              desc: 'Find out how likely any text is to be AI-generated with a score from Sapling AI Detector.',
               link: '/ai-check',
               cta: 'Check text'
             },
