@@ -43,6 +43,7 @@ export default function GeneratePage() {
   
   const abortControllerRef = useRef<AbortController | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
@@ -56,6 +57,11 @@ export default function GeneratePage() {
   ]
 
   useEffect(() => { loadHistory() }, [])
+  
+  // Auto-scroll to view the tutor thinking label instantly
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
 
   const loadHistory = async () => {
     const { data } = await supabase
@@ -211,11 +217,10 @@ export default function GeneratePage() {
   return (
     <div className="h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300 overflow-hidden">
       
-      {/* --- NAVBAR: EXACT MATCH TO AI CHECK --- */}
+      {/* --- NAVBAR --- */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
-            {/* The w-14 spacer matches AI Check, but we put the Sidebar Toggle inside it to save space */}
             <div className="w-14 shrink-0 flex items-center" aria-hidden="true">
                <button 
                 onClick={() => setSidebarOpen(!sidebarOpen)} 
@@ -296,7 +301,7 @@ export default function GeneratePage() {
           {!started && (
             <div className="absolute inset-0 flex items-center justify-center p-8 z-40 bg-white dark:bg-[#0f172a]">
               <div className="max-w-lg w-full space-y-8 text-center">
-                <h2 className="text-5xl font-black text-slate-900 dark:text-white">Tutor Mode</h2>
+                <h2 className="text-5xl font-black text-slate-900 dark:text-white">AI Tutor</h2>
                 <div className="space-y-4">
                   <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-5 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold outline-none shadow-sm focus:border-blue-500 transition-all">
                     <option value="">Subject</option>
@@ -312,8 +317,8 @@ export default function GeneratePage() {
             </div>
           )}
 
-          {/* CHAT DISPLAY */}
-          <div className="flex-1 overflow-y-auto p-8 space-y-12 pb-48">
+          {/* CHAT DISPLAY: Added explicit height rules and bottom padding context */}
+          <div className="flex-1 overflow-y-auto p-8 pb-36 h-full">
             <div className="max-w-4xl mx-auto space-y-10">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -328,6 +333,7 @@ export default function GeneratePage() {
                   <button onClick={handleStop} className="p-3 text-red-500 hover:bg-red-50 rounded-full"><StopCircle size={24} /></button>
                 </div>
               )}
+              <div ref={messagesEndRef} />
             </div>
           </div>
 
