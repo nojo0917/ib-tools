@@ -58,7 +58,6 @@ export default function GeneratePage() {
 
   useEffect(() => { loadHistory() }, [])
   
-  // Auto-scroll to view the tutor thinking label instantly
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
@@ -165,13 +164,21 @@ export default function GeneratePage() {
       const res = await fetch('/api/gen', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, taskType, messages: updatedMessages, fileData: attachedFile?.type === 'image' ? null : attachedFile?.data }),
+        body: JSON.stringify({ 
+          subject, 
+          taskType, 
+          messages: updatedMessages, 
+          fileData: attachedFile?.type === 'image' ? null : attachedFile?.data 
+        }),
         signal: controller.signal
       })
+
+      if (!res.ok) throw new Error('Network payload rejection')
 
       const reader = res.body?.getReader()
       const decoder = new TextDecoder()
       let fullOutput = '', buffer = ''
+      
       setMessages(prev => [...prev, { role: 'assistant', content: '' }])
 
       while (reader) {
@@ -197,21 +204,39 @@ export default function GeneratePage() {
         }
       }
 
+      // Safe state serialization patch
       const { data: { user } } = await supabase.auth.getUser()
       if (user && fullOutput) {
-        const payload = [...updatedMessages, { role: 'assistant', content: cleanText(fullOutput) }]
+        const finalizedCleanText = cleanText(fullOutput)
+        const payload = [...updatedMessages, { role: 'assistant', content: finalizedCleanText }]
+        
         if (currentChatId) {
           await supabase.from('generations').update({ output: JSON.stringify(payload) }).eq('id', currentChatId)
+          await loadHistory()
         } else {
-          const { data } = await supabase.from('generations').insert({ 
-            user_id: user.id, tool: 'generate', subject, task_type: taskType, 
-            input: userMessage.content, output: JSON.stringify(payload) 
+          const { data, error: dbError } = await supabase.from('generations').insert({ 
+            user_id: user.id, 
+            tool: 'generate', 
+            subject, 
+            task_type: taskType, 
+            input: userMessage.content, 
+            output: JSON.stringify(payload) 
           }).select().single()
-          if (data) setCurrentChatId(data.id)
+          
+          if (dbError) throw dbError
+          if (data) {
+            setCurrentChatId(data.id)
+            // Statically lock local messages array context to ensure no component flash
+            setMessages(payload)
+            await loadHistory()
+          }
         }
-        loadHistory()
       }
-    } catch (e) { setError('Error occurred') } finally { setLoading(false) }
+    } catch (e) { 
+      setError('Error occurred during processing.') 
+    } finally { 
+      setLoading(false) 
+    }
   }
 
   return (
@@ -317,8 +342,8 @@ export default function GeneratePage() {
             </div>
           )}
 
-          {/* CHAT DISPLAY: Added explicit height rules and bottom padding context */}
-          <div className="flex-1 overflow-y-auto p-8 pb-36 h-full">
+          {/* CHAT DISPLAY */}
+          <div className="flex-1 overflow-y-auto p-8 pb-40 h-full">
             <div className="max-w-4xl mx-auto space-y-10">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -331,6 +356,11 @@ export default function GeneratePage() {
                 <div className="flex items-center gap-4">
                   <div className="text-base font-bold text-blue-500 animate-pulse px-6 py-3 bg-blue-50 dark:bg-blue-900/20 rounded-full">Tutor is thinking...</div>
                   <button onClick={handleStop} className="p-3 text-red-500 hover:bg-red-50 rounded-full"><StopCircle size={24} /></button>
+                </div>
+              )}
+              {error && (
+                <div className="p-4 rounded-xl bg-red-50 text-red-600 border border-red-100 text-sm max-w-fit">
+                  {error}
                 </div>
               )}
               <div ref={messagesEndRef} />
