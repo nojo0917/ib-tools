@@ -39,7 +39,7 @@ export default function PracticePapersPage() {
   // Updated navigation to match the new "AI Polish" branding
   const navLinks = [
     { name: 'Home', href: '/home' },
-    { name: 'Generate', href: '/generate' },
+    { name: 'AI Tutor', href: '/generate' },
     { name: 'AI Check', href: '/ai-check' },
     { name: 'AI Polish', href: '/ai-polish' }, 
     { name: 'Practice Papers', href: '/practice-papers' },

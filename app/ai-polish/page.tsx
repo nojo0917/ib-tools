@@ -17,7 +17,7 @@ export default function AIPolishPage() {
 
   const navLinks = [
     { name: 'Home', href: '/home' },
-    { name: 'Generate', href: '/generate' },
+    { name: 'AI Tutor', href: '/generate' },
     { name: 'AI Check', href: '/ai-check' },
     { name: 'AI Polish', href: '/ai-polish' }, 
     { name: 'Practice Papers', href: '/practice-papers' },

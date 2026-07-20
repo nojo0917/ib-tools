@@ -68,7 +68,7 @@ export default function HomePage() {
           
           {[
             { 
-              title: 'Generate', 
+              title: 'AI Tutor', 
               emoji: '✏️', 
               desc: 'Essays, study notes, IA ideas, outlines, and revision help from your personal IB tutor.',
               link: '/generate',
