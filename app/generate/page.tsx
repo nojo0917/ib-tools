@@ -152,7 +152,7 @@ export default function GeneratePage() {
     const controller = new AbortController()
     abortControllerRef.current = controller
     const userMessage: Message = { role: 'user', content: attachedFile ? `[File: ${attachedFile.name}] ${input}` : input }
-    const updatedMessages = [...messages, userMessage]
+    const updatedMessages: Message[] = [...messages, userMessage]
     
     setMessages(updatedMessages)
     setInput(''); setAttachedFile(null); setLoading(true); setStarted(true)
@@ -203,7 +203,8 @@ export default function GeneratePage() {
 
       const { data: { user } } = await supabase.auth.getUser()
       if (user && fullOutput) {
-        const payload = [...updatedMessages, { role: 'assistant', content: fullOutput }]
+        const assistantMsg: Message = { role: 'assistant', content: fullOutput }
+        const payload: Message[] = [...updatedMessages, assistantMsg]
         
         if (currentChatId) {
           await supabase.from('generations').update({ output: JSON.stringify(payload) }).eq('id', currentChatId)
