@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
+import ReactMarkdown from 'react-markdown'
 import { 
   Paperclip, X, Image as ImageIcon, FileText, 
   ChevronLeft, ChevronRight, Plus, Send, StopCircle,
@@ -91,10 +92,6 @@ export default function GeneratePage() {
       abortControllerRef.current.abort()
       setLoading(false)
     }
-  }
-
-  const cleanText = (text: string) => {
-    return text.replace(/\*\*/g, '').replace(/\|/g, '').replace(/---/g, '').replace(/#/g, '').trim();
   }
 
   const processFile = (file: File) => {
@@ -196,7 +193,7 @@ export default function GeneratePage() {
               fullOutput += text
               setMessages(prev => {
                 const updated = [...prev]
-                updated[updated.length - 1].content = cleanText(fullOutput)
+                updated[updated.length - 1].content = fullOutput
                 return updated
               })
             } catch {}
@@ -204,11 +201,9 @@ export default function GeneratePage() {
         }
       }
 
-      // Safe state serialization patch
       const { data: { user } } = await supabase.auth.getUser()
       if (user && fullOutput) {
-        const finalizedCleanText = cleanText(fullOutput)
-        const payload = [...updatedMessages, { role: 'assistant', content: finalizedCleanText }]
+        const payload = [...updatedMessages, { role: 'assistant', content: fullOutput }]
         
         if (currentChatId) {
           await supabase.from('generations').update({ output: JSON.stringify(payload) }).eq('id', currentChatId)
@@ -226,7 +221,6 @@ export default function GeneratePage() {
           if (dbError) throw dbError
           if (data) {
             setCurrentChatId(data.id)
-            // Statically lock local messages array context to ensure no component flash
             setMessages(payload)
             await loadHistory()
           }
@@ -242,7 +236,7 @@ export default function GeneratePage() {
   return (
     <div className="h-screen flex flex-col bg-white text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300 overflow-hidden">
       
-      {/* --- NAVBAR --- */}
+      {/* NAVBAR */}
       <nav className="w-full bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
@@ -347,8 +341,18 @@ export default function GeneratePage() {
             <div className="max-w-4xl mx-auto space-y-10">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] rounded-[2rem] px-8 py-6 text-lg leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-100 dark:border-slate-700'}`}>
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  <div className={`max-w-[85%] rounded-[2rem] px-8 py-6 text-base md:text-lg leading-relaxed shadow-sm ${
+                    msg.role === 'user' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-100 dark:border-slate-700'
+                  }`}>
+                    {msg.role === 'user' ? (
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                    ) : (
+                      <div className="space-y-3 [&>h1]:text-2xl [&>h1]:font-bold [&>h2]:text-xl [&>h2]:font-bold [&>h3]:text-lg [&>h3]:font-semibold [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5 [&>p]:leading-relaxed [&>strong]:font-semibold">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
